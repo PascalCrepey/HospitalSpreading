@@ -20,7 +20,7 @@ param_beta = 0.16
 ##    MODEL  ##
 ###############
 
-ode_model <- odin::odin(
+stoch_model_si <- odin::odin(
   {
 
     #Total population in each hospital i
@@ -30,6 +30,7 @@ ode_model <- odin::odin(
     n_S_out[] <- rbinom(sum(d[i,]), S[i]/N[i])
     n_I_out[] <- sum(d[i,]) - n_S_out[i]
 
+    #A revoir!!
     n_S_in[] <- rbinom(sum(d[,i]), ((sum(S[])-S[i]) / (sum(N[])-N[i])) )
     n_I_in[] <- sum(d[,i]) - n_S_in[i]
 
@@ -68,6 +69,11 @@ ode_model <- odin::odin(
 
   }
 )
+
+#run the model
+model <- stoch_model_si$new(user = pars)
+date_lim = 30
+res <- model$run(0:date_lim)
 
 ################
 ##    PLOT  ##
