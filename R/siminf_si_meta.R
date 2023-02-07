@@ -1,20 +1,17 @@
 ##################
 ## Load library ##
 ##################
-
 library(data.table)
 library(SimInf)
 
 ##################
 ## Compartments ##
 ##################
-
 compartments = c("S", "I")
 
 #################
 ## Transitions ##
 #################
-
 transitions = c(
   "@ -> mu0 -> S"
   , "S -> beta*S*I/(S+I) -> I"
@@ -24,17 +21,13 @@ transitions = c(
 ########################
 ## General parameters ##
 ########################
-
 gdata = c(beta = 0.16, gamma = 0.077, mu0 = 0, mu1 = 0)
-
 tspan_max = 30
 tspan = 1:tspan_max
-
 
 ########################
 ## Add sub population ##
 ########################
-
 npop <- 10
 
 starting_pop = rep(100, 10)
@@ -42,29 +35,6 @@ index_pop = c(1, rep(0, 9))
 
 u0 = data.frame(S = starting_pop - index_pop
                 , I = index_pop)
-
-# u0 = data.frame(S = c(99,rep(100, npop-1)),
-#                 I = c(1,rep(0, npop-1)))
-
-
-model <- mparse(
-  transitions = transitions,
-  compartments = compartments,
-  gdata = gdata,
-  u0 = u0,
-  tspan = tspan
-)
-
-result <- run(model)
-result
-
-plot(result)
-plot(result, index = 1)
-plot(result, "S", index = 1)
-plot(result, "S", index = 2)
-
-
-#############
 
 
 E <- structure(.Data = c(1, 1),
@@ -90,8 +60,23 @@ events <- data.frame(
   select     = rep(rep(1, 9), tspan_max), ## Use the 4th column in the model select matrix
   shift      = rep(rep(0, 9), tspan_max) ## Not used in this example
 )
-
 events <- events[events$node != events$dest, ]
 
+model <- mparse(
+  transitions = transitions,
+  compartments = compartments,
+  gdata = gdata,
+  u0 = u0,
+  tspan = tspan,
+  E = E, 
+  N = N, 
+  events = events
+)
+result <- run(model)
+result
 
-
+plot(result)
+plot(result, index = 1)
+plot(result, "S", index = 1)
+plot(result, "S", index = 2)
+plot(result, "S", index = 3)
