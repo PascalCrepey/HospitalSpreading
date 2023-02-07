@@ -28,7 +28,7 @@ ode_model <- odin::odin(
 
     #stochastic update
     update(S[]) <- S[i] - max(rbinom(S[i], beta*I[i]/N[i]), 0) + sum(d[i,])
-    update(I[]) <- I[i] + max(rbinom(I[i], beta*I[i]/N[i]), 0) + sum(d[i,])
+    update(I[]) <- I[i] + max(rbinom(I[i], beta*I[i]/N[i]), 0)
 
     #Initial condition
     initial(S[]) <- s_initial
