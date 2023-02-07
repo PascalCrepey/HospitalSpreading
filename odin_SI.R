@@ -27,8 +27,8 @@ ode_model <- odin::odin(
     N[] <- S[i] + I[i]
 
     #stochastic update
-    update(S[]) <- S[i] - max(rbinom(S[i], beta*I[i]/N[i]), 0) + d[i,j]
-    update(I[]) <- I[i] + max(rbinom(I[i], beta*I[i]/N[i]), 0) + d[i,j]
+    update(S[]) <- S[i] - max(rbinom(S[i], beta*I[i]/N[i]), 0) + sum(d[i,])
+    update(I[]) <- I[i] + max(rbinom(I[i], beta*I[i]/N[i]), 0) + sum(d[i,])
 
     #Initial condition
     initial(S[]) <- s_initial
@@ -41,6 +41,7 @@ ode_model <- odin::odin(
     n_hospitals <- user()
     s_initial <- user()
     i_initial <- user()
+    d[,] <- user()
 
     #dimension of parameters
     # dim(beta) #one dimension because beta is hospital-indepedent
@@ -50,10 +51,7 @@ ode_model <- odin::odin(
     dim(S) <- n_hospitals
     dim(I) <- n_hospitals
 
-    d[,] <- c(n_hospitals, n_hospitals)
-
-    #matrix of transfer
-    d[i, j]
+    dim(d) <- c(n_hospitals, n_hospitals)
 
   }
 )
