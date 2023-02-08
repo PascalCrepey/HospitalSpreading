@@ -98,8 +98,4 @@ plot(res[,,1][,1], res[,,1][,2], type = "l", xlab = "Time", ylab = "Number of in
 lines(res[,,1][,1], res[,,1][,3], col = "red")
 legend("topright", lwd = 1, col = c("black", "red"), legend = c("S", "I"), bty = "n")
 
-##################
-## CALCUL TIME ##
-#################
-
 
