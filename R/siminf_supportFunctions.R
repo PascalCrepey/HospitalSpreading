@@ -42,7 +42,7 @@ make_fake_matrix <- function(nmetapop, scale = 5){
 #' @examples
 make_siminf_events <- function(times, nmetapop, transfer_matrix, select = 1, shift = 0){
   events <- data.frame(
-    event      = rep(3,nmetapop*nmetapop*length(times)),  ## Event "extTrans" is a movement between nodes// 0) exit, 1) enter, 2) internal transfer, and 3) external transfer
+    event      = 3,  ## Event "extTrans" is a movement between nodes// 0) exit, 1) enter, 2) internal transfer, and 3) external transfer
     time       = rep(times, each = nmetapop*nmetapop), ## The time that the event happens
 
     node       = rep(rep(1:nmetapop, times = nmetapop), length(times)), ## In which node does the event occur
