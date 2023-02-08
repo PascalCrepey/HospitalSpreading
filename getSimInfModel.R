@@ -2,7 +2,7 @@ library(data.table)
 library(SimInf)
 library(magrittr)
 library(ggplot2)
-
+library(microbenchmark)
 
 getSimInfModel <- function() {
   ##################
