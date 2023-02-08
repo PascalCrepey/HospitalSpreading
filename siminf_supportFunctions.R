@@ -1,4 +1,33 @@
 
+#' Creates a random matrix of transfers between metapopulations
+#'
+#' @param nmetapop number of metapopulations
+#' @param scale average number of transfers for each pair of metapopulations
+#'
+#' @return transfer matrix
+#' @export
+#'
+#' @examples
+make_fake_matrix <- function(nmetapop, scale = 5){
+  # set.seed(1)
+  output <- matrix(0, nrow = nmetapop, ncol = nmetapop)
+  i = 1
+  for(i in 1:scale){
+    A= diag(nmetapop)
+    reorderIndex = sample(nrow(A))
+    while(any(reorderIndex == 1:nmetapop)){
+      # print("running")
+      reorderIndex = sample(nrow(A))
+
+    }
+    output = output + A[reorderIndex, ]
+    # print(output)
+
+  }
+
+  output
+}
+
 #' Converts a daily transfer matrix into a data frame of daily transfer events
 #'
 #' @param times vector of time steps
@@ -13,7 +42,7 @@
 #' @examples
 make_siminf_events <- function(times, nmetapop, transfer_matrix, select = 1, shift = 0){
   events <- data.frame(
-    event      = rep(3*nmetapop*nmetapop*length(times)),  ## Event "extTrans" is a movement between nodes// 0) exit, 1) enter, 2) internal transfer, and 3) external transfer
+    event      = rep(3,nmetapop*nmetapop*length(times)),  ## Event "extTrans" is a movement between nodes// 0) exit, 1) enter, 2) internal transfer, and 3) external transfer
     time       = rep(times, each = nmetapop*nmetapop), ## The time that the event happens
 
     node       = rep(rep(1:nmetapop, times = nmetapop), length(times)), ## In which node does the event occur

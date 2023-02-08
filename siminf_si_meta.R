@@ -53,15 +53,8 @@ N <- matrix(rep(0, length(compartments)),
             dimnames = list(compartments,
                             c("1", "2")))
 
-A= diag(npop)
-reorderIndex = sample(nrow(A))
-if(any(reorderIndex == 1:npop)){
-  print("running")
-  reorderIndex = sample(nrow(A))
 
-}
-trans_mat = A[reorderIndex, ]
-
+trans_mat = make_fake_matrix(nmetapop = npop, scale = 5)
 
 events <- make_siminf_events(times = tspan, nmetapop = npop, transfer_matrix = trans_mat
                    , select = 1, shift = 0)
