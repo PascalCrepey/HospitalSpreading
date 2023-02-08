@@ -1,0 +1,55 @@
+
+#' Converts a daily transfer matrix into a data frame of daily transfer events
+#'
+#' @param times vector of time steps
+#' @param nmetapop number of metapopulations
+#' @param transfer_matrix matrix of daily transfers, from the row to the column
+#' @param select the state compartments in the source metapopulation which can be sampled: by default any state can be chosen at random
+#' @param shift ignore for now
+#'
+#' @return data frame of events
+#' @export
+#'
+#' @examples
+make_siminf_events <- function(times, nmetapop, transfer_matrix, select = 1, shift = 0){
+  events <- data.frame(
+    event      = rep(3*nmetapop*nmetapop*length(times)),  ## Event "extTrans" is a movement between nodes// 0) exit, 1) enter, 2) internal transfer, and 3) external transfer
+    time       = rep(times, each = nmetapop*nmetapop), ## The time that the event happens
+
+    node       = rep(rep(1:nmetapop, times = nmetapop), length(times)), ## In which node does the event occur
+    dest       = rep(rep(1:nmetapop, each = nmetapop), length(times)), ## Which node is the destination node
+    n          = rep(as.vector(transfer_matrix), length(times)), ## How many individuals are moved
+    proportion = 0,
+    select     = select,
+    shift      = shift
+  )
+
+  events[events$node != events$dest, ]
+}
+
+
+
+
+#' Converts the output of siminf to a long data frame
+#'
+#' @param U the U object from the model output
+#' @param times vector of time steps
+#' @param comparts vector of compartment names e.g. S and I
+#' @param nmetapop number of metapopulations
+#'
+#' @return data frame with columns for time, metapopulation, state compartment and the value of the variable
+#' @export
+#'
+#' @examples
+convert_siminfU <- function(U, times, comparts, nmetapop){
+  U %>%
+    t %>%
+    as.vector %>%
+    {data.frame(times = rep(times, times = nmetapop*length(comparts))
+                , metapop = rep(1:nmetapop, each = length(comparts)*length(times))
+                , state = rep(rep(comparts, each = length(times)), times = nmetapop)
+                , value = .)
+    }
+
+}
+

@@ -53,17 +53,8 @@ N <- matrix(rep(0, length(compartments)),
             dimnames = list(compartments,
                             c("1", "2")))
 
-events <- data.frame(
-  event      = rep(rep(3, 9), tspan_max),  ## Event "extTrans" is a movement between nodes// 0) exit, 1) enter, 2) internal transfer, and 3) external transfer
-  time       = rep(1:tspan_max, each = 9), ## The time that the event happens
-  node       = rep(c(1, 1, 1, 2, 2, 2, 3, 3, 3), tspan_max), ## In which node does the event occur
-  dest       = rep(c(1, 2, 3, 1, 2, 3, 1, 2, 3), tspan_max), ## Which node is the destination node
-  n          = rep(c(0, 5, 2, 3, 0, 3, 4, 1, 0), tspan_max), ## How many individuals are moved
-  proportion = rep(rep(0, 9), tspan_max), ## This is not used when n > 0
-  select     = rep(rep(1, 9), tspan_max), ## Use the 4th column in the model select matrix
-  shift      = rep(rep(0, 9), tspan_max) ## Not used in this example
-)
-events <- events[events$node != events$dest, ]
+events <- make_siminf_events(times = tspan, nmetapop = npop, transfer_matrix = flux
+                   , select = 1, shift = 0)
 
 model <- mparse(
   transitions = transitions,
@@ -76,31 +67,34 @@ model <- mparse(
   events = events
 )
 result <- run(model)
-result
-
-plot(result)
-plot(result, index = 1)
-plot(result, index = 2)
-plot(result, index = 3)
-
-
-plot(result, "S", index = 1)
-plot(result, "S", index = 2)
-plot(result, "S", index = 3)
 
 ################
 ##    PLOT  ##
 ###############
 
-result@U
-result@U %>%
-  t %>%
-  as.vector %>%
-  cbind(., rep(c("S", "I"), each = tspan_max))
-result %>% as.data.frame
+
+results_tib <- convert_siminfU(result@U, times = tspan, comparts = compartments
+                            , nmetapop = npop)
+
+
+
+results_tib %>%
+  ggplot(aes(x = times, y = value, colour = state)) +
+  geom_line() +
+  facet_wrap(metapop~.)
 
 ##################
 ## CALCUL TIME ##
 #################
+
+
+
+
+#Do this 1000 times
+#Compare average results
+
+microbenchmark
+
+
 
 
