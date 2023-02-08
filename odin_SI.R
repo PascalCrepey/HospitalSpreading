@@ -4,9 +4,9 @@
 ## INPUT DATA ##
 ################
 
-df_transfer = data.frame(A = c(NA, 3, 4),
-                         B = c(5, NA, 1),
-                         C = c(2, 3, NA),
+df_transfer = data.frame(A = c(0, 3, 4),
+                         B = c(5, 0, 1),
+                         C = c(2, 3, 0),
                          row.names = c("A", "B", "C"))
 
 n_hospitals = 3
@@ -27,16 +27,20 @@ stoch_model_si <- odin::odin(
     N[] <- S[i] + I[i]
 
     #number of patients moving that are S or I
-    n_S_out[] <- rbinom(sum(d[i,]), S[i]/N[i])
-    n_I_out[] <- sum(d[i,]) - n_S_out[i]
+    t_S[,] <- rbinom(d[i,j], S[i]/N[i])
+    t_I[,] <- d[i,j] - t_S[i,j]
 
-    #A revoir!!
-    n_S_in[] <- rbinom(sum(d[,i]), ((sum(S[])-S[i]) / (sum(N[])-N[i])) )
-    n_I_in[] <- sum(d[,i]) - n_S_in[i]
+    #Vectors of transfers out of hospitals
+    t_S_out[] <- sum(t_S[i,])
+    t_I_out[] <- sum(t_I[i,])
+
+    #Vectors of transfers into hospitals
+    t_S_in[] <- sum(t_S[,i])
+    t_I_in[] <- sum(t_I[,i])
 
     #stochastic update
-    update(S[]) <- S[i] - max(rbinom(S[i], beta*I[i]/N[i]), 0) - n_S_out[i] + n_S_in[i]
-    update(I[]) <- I[i] + max(rbinom(I[i], beta*I[i]/N[i]), 0) - n_I_out[i] + n_I_in[i]
+    update(S[]) <- S[i] - max(rbinom(S[i], 1-exp(-beta*I[i]/N[i])), 0) - t_S_out[i] + t_S_in[i]
+    update(I[]) <- I[i] + max(rbinom(I[i], 1-exp(-beta*I[i]/N[i])), 0) - t_I_out[i] + t_I_in[i]
 
     #Initial condition
     initial(S[]) <- s_initial
@@ -60,12 +64,14 @@ stoch_model_si <- odin::odin(
     dim(I) <- n_hospitals
 
     dim(d) <- c(n_hospitals, n_hospitals)
+    dim(t_S) <- c(n_hospitals, n_hospitals)
+    dim(t_I) <- c(n_hospitals, n_hospitals)
 
-    dim(n_S_out) <- n_hospitals
-    dim(n_I_out) <- n_hospitals
+    dim(t_S_out) <- n_hospitals
+    dim(t_I_out) <- n_hospitals
 
-    dim(n_S_in) <- n_hospitals
-    dim(n_I_in) <- n_hospitals
+    dim(t_S_in) <- n_hospitals
+    dim(t_I_in) <- n_hospitals
 
   }
 )
