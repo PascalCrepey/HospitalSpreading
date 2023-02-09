@@ -126,7 +126,6 @@ siminf_tib %>%
 
 ```
 GRAPH ABOVE HERE
-
 ```{plot_odin, echo = F, eval = T}
 @Hanifa, why do these not make plots? Code should stay hidden
 odin_tib %>%
@@ -278,6 +277,8 @@ odin_poisson_runs <- odin_model_poisson$run(tspan, replicate = Nsims)
 odin_binomial100_runs <- odin_model_binomial100$run(1:(tspan_max/0.01), replicate = Nsims)
 odin_binomial5_runs <- odin_model_binomial5$run(1:(tspan_max/0.2), replicate = Nsims)
 
+
+
 for(i in 1:Nsims){
 
   siminf_multi_piece <- convert_siminfU(run(siminf_model)@U, times = tspan, comparts = c("S", "I")
@@ -377,6 +378,14 @@ rbind(siminf_multi %>%
 ```
 
 GRAPH ABOVE HERE
+
+We also compare the runtime of each over 10 runs.
+```{runtime_poisson, echo = T, eval = T}
+@Hanifa how to get the output here?
+print(benchmark_odin(odin_model_poisson, times = tspan_odin, nRun = 10))
+print(benchmark_odin(odin_model_binomial5, times = tspan_odin, nRun = 10))
+print(benchmark_odin(odin_model_binomial100, times = tspan_odin, nRun = 10))
+```
 
 ## Table with pros and cons
 
