@@ -243,7 +243,7 @@ rbind(siminf_multi %>%
   summarise(mean = mean(value)
             , lo = max(value)
             , hi = min(value)) %>%
-  mutate(package = "Odin")
+  mutate(package = "Odin poisson")
 , out.deSolve) %>%
   # filter(package != "Odin") %>%
   filter(times < 30, metapop == 1) %>%
