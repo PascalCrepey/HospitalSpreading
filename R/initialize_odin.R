@@ -1,5 +1,17 @@
 ########### Simple stochastic SI with odin ##########
 
+#' Initialize the Odin model
+#'
+#' @param beta
+#' @param n_subpop number of subpopulation
+#' @param size_subpop
+#' @param transfer_matrix
+#' @param I_per_subpop
+#'
+#' @return
+#' @export
+#'
+#' @examples
 initialize_odin <- function(beta,
                  n_subpop,
                  size_subpop,
