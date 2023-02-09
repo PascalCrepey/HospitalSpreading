@@ -23,6 +23,7 @@ library(magrittr)
 library(ggplot2)
 library(tidyverse)
 library(tictoc)
+library(microbenchmark)
 
 ```
 
@@ -145,13 +146,40 @@ all_results |>
 
 ```
 
+
+
+## Time performance
+We use the package *microbenchmark* to compare the performance of each of these models over 10 simulations.
+```{r runtime_tests, echo = T, eval = T}
+
+print(benchmark_siminf(siminf_model, nRun = 10))
+print(benchmark_odin(odin_model, times = tspan_odin, nRun = 10))
+```
+
+
+
 ## Across multiple simulations
-To compare the model outputs while controlling for the stochasticity, we conduct multiple simulations of each with the same parameters. 
+To compare the model outputs while controlling for the stochasticity, we conduct multiple simulations of each with the same parameters. We compare over a simulation in a single hospital with no migration. 
 
 We also conduct an equivalent deterministic simulation use *deSolve*
 
-```{r set_nsims}
+
+```{r init_multi_models}
+
 Nsims = 100
+
+trans_mat_null = matrix(0, nrow = npop, ncol = npop)
+
+siminf_model <- getSimInfModel(beta = beta, tspan = tspan, npop = npop
+               , n_initial_infected = index_pop, starting_pop = starting_pop
+               , trans_mat = trans_mat_null)
+
+odin_model <- initialize_odin_binomial(beta = beta_odin,
+                            n_subpop = npop,
+                            size_subpop = starting_pop,
+                            I_per_subpop = index_pop,
+                            transfer_matrix = trans_mat_null)
+
 ```
 
 ```{r run_multisims, echo = F}
@@ -207,7 +235,9 @@ out.deSolve<-as.data.frame(out) %>%
 ```
 
 
-```{r plot_multi, echo = F}
+
+```{r plot_multi, echo = F, eval = T}
+
 rbind(siminf_multi %>%
   group_by(times, metapop, state) %>%
   summarise(mean = mean(value)
@@ -223,7 +253,7 @@ rbind(siminf_multi %>%
   mutate(package = "Odin")
 , out.deSolve) %>%
   # filter(package != "Odin") %>%
-  filter(times < 30) %>%
+  filter(times < 30, metapop == 1) %>%
   ggplot(aes(x = times, colour = package)) +
   geom_line(aes(y = mean, linetype = "mean")) +
   geom_line(aes(y = lo, linetype = "range")) +
@@ -231,9 +261,143 @@ rbind(siminf_multi %>%
   facet_grid(metapop~state)
 ```
 
-## Performance
 
 ## Poisson and timesteps (with performance)
+The *odin* package integrates in discrete time, so discrepancies between this and the other models may result from the time step being too large. We examine the outcome when the time step is reduced. 
+Changes of state in this package are governed by a binomial distribution by default, but as these numbers rise they approach a poisson distribution, and it may be more appropriate to use that explicitly, for which the package provides a functionality, and we explore this as well. 
+
+```{r run_poisson, echo = F, eval = T, message=FALSE}
+odin_model_binomial100 <- initialize_odin_binomial(beta = beta*0.01,
+                            n_subpop = npop,
+                            size_subpop = starting_pop,
+                            I_per_subpop = index_pop,
+                            transfer_matrix = trans_mat)
+
+odin_model_binomial5 <- initialize_odin_binomial(beta = beta*0.2,
+                                          n_subpop = npop,
+                                          size_subpop = starting_pop,
+                                          I_per_subpop = index_pop,
+                                          transfer_matrix = trans_mat)
+
+odin_model_poisson <- initialize_odin_poisson(beta = beta,
+                                          n_subpop = npop,
+                                          size_subpop = starting_pop,
+                                          I_per_subpop = index_pop,
+                                          transfer_matrix = trans_mat)
+
+odin_poisson_runs <- odin_model_poisson$run(tspan, replicate = Nsims)
+odin_binomial100_runs <- odin_model_binomial100$run(1:(tspan_max/0.01), replicate = Nsims)
+odin_binomial5_runs <- odin_model_binomial5$run(1:(tspan_max/0.2), replicate = Nsims)
+
+
+
+for(i in 1:Nsims){
+
+  siminf_multi_piece <- convert_siminfU(run(siminf_model)@U, times = tspan, comparts = c("S", "I")
+                                        , nmetapop = npop) %>%
+    mutate(sim = i)
+
+  odin_poisson_multi_piece <- odin_poisson_runs[,,i] %>%
+    as_tibble %>%
+    select(step, starts_with("S"), starts_with("I")) %>%
+    rename_all(~gsub("\\[", "_", .x)) %>%
+    rename_all(~gsub("\\]", "", .x)) %>%
+    rename(times = step) %>%
+    pivot_longer(-times, names_sep = "_", names_to = c("state", "metapop")) %>%
+    mutate(metapop = as.numeric(metapop)
+           , sim = i)
+
+  odin_binomial100_multi_piece <- odin_binomial100_runs[,,i] %>%
+    as_tibble %>%
+    select(step, starts_with("S"), starts_with("I")) %>%
+    rename_all(~gsub("\\[", "_", .x)) %>%
+    rename_all(~gsub("\\]", "", .x)) %>%
+    rename(times = step) %>%
+    pivot_longer(-times, names_sep = "_", names_to = c("state", "metapop")) %>%
+    mutate(metapop = as.numeric(metapop)
+           , sim = i)
+
+  odin_binomial5_multi_piece <- odin_binomial5_runs[,,i] %>%
+    as_tibble %>%
+    select(step, starts_with("S"), starts_with("I")) %>%
+    rename_all(~gsub("\\[", "_", .x)) %>%
+    rename_all(~gsub("\\]", "", .x)) %>%
+    rename(times = step) %>%
+    pivot_longer(-times, names_sep = "_", names_to = c("state", "metapop")) %>%
+    mutate(metapop = as.numeric(metapop)
+           , sim = i)
+
+
+
+  if(i == 1){
+    siminf_multi <- siminf_multi_piece
+    odin_poisson_multi <- odin_poisson_multi_piece
+    odin_binomial100_multi <- odin_binomial100_multi_piece
+    odin_binomial5_multi <- odin_binomial5_multi_piece
+    odin_poisson_multi <- odin_poisson_multi_piece
+
+
+  } else {
+    siminf_multi <- rbind(siminf_multi, siminf_multi_piece)
+    odin_binomial100_multi <- rbind(odin_binomial100_multi, odin_binomial100_multi_piece)
+    odin_binomial5_multi <- rbind(odin_binomial5_multi, odin_binomial5_multi_piece)
+    odin_poisson_multi <- rbind(odin_poisson_multi, odin_poisson_multi_piece)
+  }
+}
+
+siminf_multi
+odin_poisson_multi
+odin_binomial100_multi
+odin_binomial5_multi
+```
+
+
+```{r plot_poisson, eval = T, message=FALSE, echo=FALSE}
+rbind(siminf_multi %>%
+  group_by(times, metapop, state) %>%
+  summarise(mean = mean(value)
+            , lo = max(value)
+            , hi = min(value)) %>%
+    mutate(package = "SimInf")
+, odin_binomial100_multi %>%
+  mutate(times = times*0.01) %>%
+  group_by(times, metapop, state) %>%
+  summarise(mean = mean(value)
+            , lo = max(value)
+            , hi = min(value)) %>%
+  mutate(package = "Odin binomial step 100th")
+, odin_binomial5_multi %>%
+  mutate(times = times*0.2) %>%
+  group_by(times, metapop, state) %>%
+  summarise(mean = mean(value)
+            , lo = max(value)
+            , hi = min(value)) %>%
+  mutate(package = "Odin binomial step 5th")
+, odin_poisson_multi %>%
+  group_by(times, metapop, state) %>%
+  summarise(mean = mean(value)
+            , lo = max(value)
+            , hi = min(value)) %>%
+  mutate(package = "Odin poisson")
+, out.deSolve) %>%
+  # filter(package != "Odin") %>%
+  filter(times < 30, metapop == 1) %>%
+  ggplot(aes(x = times, colour = package)) +
+  geom_line(aes(y = mean, linetype = "mean")) +
+  geom_line(aes(y = lo, linetype = "range")) +
+  geom_line(aes(y = hi, linetype = "range")) +
+  facet_grid(.~state)
+```
+
+
+We also compare the runtime of each over 10 runs.
+
+```{r runtime_poisson, echo = T, eval = T}
+
+print(benchmark_odin(odin_model_poisson, times = tspan_odin, nRun = 10))
+print(benchmark_odin(odin_model_binomial5, times = tspan_odin, nRun = 10))
+print(benchmark_odin(odin_model_binomial100, times = tspan_odin, nRun = 10))
+```
 
 ## Table with pros and cons
 
