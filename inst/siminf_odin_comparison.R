@@ -252,7 +252,7 @@ rbind(siminf_multi %>%
   geom_line(aes(y = lo, linetype = "range")) +
   geom_line(aes(y = hi, linetype = "range")) +
   facet_grid(.~state)
-
+ggsave("plots/comparison_odin_siminf.png", height = 4, width = 7)
 
 
 
