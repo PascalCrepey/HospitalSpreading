@@ -9,9 +9,8 @@ benchmark_siminf <- function(model, nRun) {
 }
 
 
-
 benchmark_odin <- function(model, times, nRun) {
-  result <- run(model)
+  # result <- run(model)
 
   results <- microbenchmark(
     odinResult = model$run(times, replicate = 1),
