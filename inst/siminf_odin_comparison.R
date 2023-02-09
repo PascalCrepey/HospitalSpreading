@@ -130,8 +130,8 @@ odin_model_poisson <- initialize_odin_poisson(beta = beta,
 Nsims = 100
 
 odin_poisson_runs <- odin_model_poisson$run(tspan, replicate = Nsims)
-odin_binomial100_runs <- odin_model_binomial$run(1:(tspan_max/0.01), replicate = Nsims)
-odin_binomial5_runs <- odin_model_binomial$run(1:(tspan_max/0.2), replicate = Nsims)
+odin_binomial100_runs <- odin_model_binomial100$run(1:(tspan_max/0.01), replicate = Nsims)
+odin_binomial5_runs <- odin_model_binomial5$run(1:(tspan_max/0.2), replicate = Nsims)
 
 for(i in 1:Nsims){
 
