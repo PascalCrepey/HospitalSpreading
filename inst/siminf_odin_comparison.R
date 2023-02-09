@@ -7,10 +7,11 @@ library(magrittr)
 library(ggplot2)
 library(tidyverse)
 library(tictoc)
+library(deSolve)
 
-source("~/SPHINx/HospitalSpreading/R/getSimInfModel.R", echo=TRUE)
-source("~/SPHINx/HospitalSpreading/R/siminf_supportFunctions.R", echo=TRUE)
-source("~/SPHINx/HospitalSpreading/R/initialize_odin.R", echo=TRUE)
+source("R/getSimInfModel.R", echo=TRUE)
+source("R/siminf_supportFunctions.R", echo=TRUE)
+source("R/initialize_odin.R", echo=TRUE)
 
 
 ########################
@@ -50,7 +51,7 @@ siminf_model <- getSimInfModel(beta = beta, tspan = tspan, npop = npop
                , n_initial_infected = index_pop, starting_pop = starting_pop
                , trans_mat = trans_mat)
 
-odin_model <- initialize_odin(beta = beta_odin,
+odin_model_binomial100 <- initialize_odin_binomial(beta = beta*0.01,
                             n_subpop = npop,
                             size_subpop = starting_pop,
                             I_per_subpop = index_pop,
@@ -58,7 +59,21 @@ odin_model <- initialize_odin(beta = beta_odin,
 
 )
 
+odin_model_binomial5 <- initialize_odin_binomial(beta = beta*0.2,
+                                          n_subpop = npop,
+                                          size_subpop = starting_pop,
+                                          I_per_subpop = index_pop,
+                                          transfer_matrix = trans_mat
 
+)
+
+odin_model_poisson <- initialize_odin_poisson(beta = beta,
+                                          n_subpop = npop,
+                                          size_subpop = starting_pop,
+                                          I_per_subpop = index_pop,
+                                          transfer_matrix = trans_mat
+
+)
 
 
 
@@ -114,7 +129,9 @@ odin_model <- initialize_odin(beta = beta_odin,
 
 Nsims = 100
 
-odin_runs <- odin_model$run(tspan_odin, replicate = Nsims)
+odin_poisson_runs <- odin_model_poisson$run(tspan, replicate = Nsims)
+odin_binomial100_runs <- odin_model_binomial100$run(1:(tspan_max/0.01), replicate = Nsims)
+odin_binomial5_runs <- odin_model_binomial5$run(1:(tspan_max/0.2), replicate = Nsims)
 
 for(i in 1:Nsims){
 
@@ -122,7 +139,27 @@ for(i in 1:Nsims){
                                         , nmetapop = npop) %>%
     mutate(sim = i)
 
-  odin_multi_piece <- odin_runs[,,i] %>%
+  odin_poisson_multi_piece <- odin_poisson_runs[,,i] %>%
+    as_tibble %>%
+    select(step, starts_with("S"), starts_with("I")) %>%
+    rename_all(~gsub("\\[", "_", .x)) %>%
+    rename_all(~gsub("\\]", "", .x)) %>%
+    rename(times = step) %>%
+    pivot_longer(-times, names_sep = "_", names_to = c("state", "metapop")) %>%
+    mutate(metapop = as.numeric(metapop)
+           , sim = i)
+
+  odin_binomial100_multi_piece <- odin_binomial100_runs[,,i] %>%
+    as_tibble %>%
+    select(step, starts_with("S"), starts_with("I")) %>%
+    rename_all(~gsub("\\[", "_", .x)) %>%
+    rename_all(~gsub("\\]", "", .x)) %>%
+    rename(times = step) %>%
+    pivot_longer(-times, names_sep = "_", names_to = c("state", "metapop")) %>%
+    mutate(metapop = as.numeric(metapop)
+           , sim = i)
+
+  odin_binomial5_multi_piece <- odin_binomial5_runs[,,i] %>%
     as_tibble %>%
     select(step, starts_with("S"), starts_with("I")) %>%
     rename_all(~gsub("\\[", "_", .x)) %>%
@@ -136,15 +173,24 @@ for(i in 1:Nsims){
 
   if(i == 1){
     siminf_multi <- siminf_multi_piece
-    odin_multi <- odin_multi_piece
+    odin_poisson_multi <- odin_poisson_multi_piece
+    odin_binomial100_multi <- odin_binomial100_multi_piece
+    odin_binomial5_multi <- odin_binomial5_multi_piece
+    odin_poisson_multi <- odin_poisson_multi_piece
+
+
   } else {
     siminf_multi <- rbind(siminf_multi, siminf_multi_piece)
-    odin_multi <- rbind(odin_multi, odin_multi_piece)
+    odin_binomial100_multi <- rbind(odin_binomial100_multi, odin_binomial100_multi_piece)
+    odin_binomial5_multi <- rbind(odin_binomial5_multi, odin_binomial5_multi_piece)
+    odin_poisson_multi <- rbind(odin_poisson_multi, odin_poisson_multi_piece)
   }
 }
 
 siminf_multi
-odin_multi
+odin_poisson_multi
+odin_binomial100_multi
+odin_binomial5_multi
 
 # siminf_multi %>%
 #   ggplot(aes(x = times, y = value, colour = state, group = interaction(state, sim))) +
@@ -178,21 +224,34 @@ rbind(siminf_multi %>%
             , lo = max(value)
             , hi = min(value)) %>%
     mutate(package = "SimInf")
-, odin_multi %>%
-  mutate(times = times*time_step) %>%
+, odin_binomial100_multi %>%
+  mutate(times = times*0.01) %>%
   group_by(times, metapop, state) %>%
   summarise(mean = mean(value)
             , lo = max(value)
             , hi = min(value)) %>%
-  mutate(package = "Odin")
+  mutate(package = "Odin binomial step 100th")
+, odin_binomial5_multi %>%
+  mutate(times = times*0.2) %>%
+  group_by(times, metapop, state) %>%
+  summarise(mean = mean(value)
+            , lo = max(value)
+            , hi = min(value)) %>%
+  mutate(package = "Odin binomial step 5th")
+, odin_poisson_multi %>%
+  group_by(times, metapop, state) %>%
+  summarise(mean = mean(value)
+            , lo = max(value)
+            , hi = min(value)) %>%
+  mutate(package = "Odin poisson")
 , out.deSolve) %>%
   # filter(package != "Odin") %>%
-  filter(times < 30) %>%
+  filter(times < 30, metapop == 1) %>%
   ggplot(aes(x = times, colour = package)) +
   geom_line(aes(y = mean, linetype = "mean")) +
   geom_line(aes(y = lo, linetype = "range")) +
   geom_line(aes(y = hi, linetype = "range")) +
-  facet_grid(metapop~state)
+  facet_grid(.~state)
 
 
 

@@ -1,10 +1,24 @@
-# library(data.table)
-# library(SimInf)
-# library(magrittr)
-# library(ggplot2)
-# library(microbenchmark)
 
-getSimInfModel <- function(tspan, npop, n_initial_infected, starting_pop, trans_mat, beta) {
+
+#' Create the SimInf model
+#'
+#' @param tspan
+#' @param npop
+#' @param n_initial_infected
+#' @param starting_pop
+#' @param trans_mat
+#' @param beta
+#'
+#' @return
+#' @export
+#'
+#' @importFrom SimInf mparse
+#' @examples
+getSimInfModel = function(tspan,
+                           npop,
+                           n_initial_infected,
+                           starting_pop,
+                           trans_mat, beta){
   ##################
   ## Compartments ##
   ##################
@@ -29,8 +43,8 @@ getSimInfModel <- function(tspan, npop, n_initial_infected, starting_pop, trans_
   ########################
 
 
-  u0 = data.frame(S = starting_pop - n_initial_infected
-                  , I = n_initial_infected)
+  u0 = data.frame(S = starting_pop - n_initial_infected,
+                  I = n_initial_infected)
 
   E <- structure(.Data = c(1, 1),
                  .Dim = c(length(compartments),1),
@@ -46,10 +60,12 @@ getSimInfModel <- function(tspan, npop, n_initial_infected, starting_pop, trans_
                               c("1", "2")))
 
 
-  events <- make_siminf_events(times = tspan, nmetapop = npop, transfer_matrix = trans_mat
-                               , select = 1, shift = 0)
+  events <- make_siminf_events(times = tspan,
+                               nmetapop = npop,
+                               transfer_matrix = trans_mat,
+                               select = 1, shift = 0)
 
-  model <- mparse(
+  model <- SimInf::mparse(
     transitions = transitions,
     compartments = compartments,
     gdata = gdata,
