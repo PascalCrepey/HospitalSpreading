@@ -219,6 +219,14 @@ rbind(siminf_multi %>%
   geom_line(aes(y = hi, linetype = "range")) +
   facet_grid(metapop~state)
 ```
+## Performance
+
+## Poisson and timesteps (with performance)
+
+## Table with pros and cons
+
+
+
 
 
 
