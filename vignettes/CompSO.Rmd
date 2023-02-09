@@ -1,5 +1,5 @@
 ---
-title: "Comparing SimInf and odin"
+title: "Comparing SimInf and odin for simulating epidemics on a network"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Comparing SimInf and odin for simulating epidemics on a network}
@@ -15,17 +15,14 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup, include = F, eval = T}
-# library(HospitalSpreading)
+library(HospitalSpreading)
+library(deSolve)
 library(data.table)
 library(SimInf)
 library(magrittr)
 library(ggplot2)
 library(tidyverse)
 library(tictoc)
-
-source("~/SPHINx/HospitalSpreading/R/getSimInfModel.R", echo=TRUE)
-source("~/SPHINx/HospitalSpreading/R/siminf_supportFunctions.R", echo=TRUE)
-source("~/SPHINx/HospitalSpreading/R/initialize_odin.R", echo=TRUE)
 
 ```
 
@@ -44,7 +41,7 @@ Migration is defined as a matrix of daily patient transfers between any two hosp
 ## Parameters
 
 Here we describe and define each of the basic parameters which can run in each model.
-```{call_parameters}
+```{r call_parameters}
 time_step = 0.01        # time step (for odin)
 beta = 0.5              # transmission rate
 
@@ -57,7 +54,7 @@ index_size = 100        # number of infected individuals in hospital 1
 ```
 Each hospital is of size *pop_size*, The initial number infected in each hospital is 0 except hospital 1 where *index_size* are infected.
 
-```{hidden_parameters, include = F}
+```{r hidden_parameters, include = F}
 
 
 tspan = 1:tspan_max # this is the number of time steps in integers
@@ -76,19 +73,19 @@ index_pop = c(index_size, rep(0, npop - 1)) #vector of starting infected populat
 ```
 ## Transfer matrix
 We define a matrix of transfers between each hospital, and this is randomly chosen in this analysis.
-```{transfer_matrix}
+```{r transfer_matrix}
 trans_mat = make_fake_matrix(nmetapop = npop, scale = 5)
 ```
 
 ## Model initialisation
 We define additional functions to initialise each of the two models using the same parameters and transition matrix.
 
-```{init_models}
+```{r init_models, echo=TRUE, message=FALSE}
 siminf_model <- getSimInfModel(beta = beta, tspan = tspan, npop = npop
                , n_initial_infected = index_pop, starting_pop = starting_pop
                , trans_mat = trans_mat)
 
-odin_model <- initialize_odin(beta = beta_odin,
+odin_model <- initialize_odin_binomial(beta = beta_odin,
                             n_subpop = npop,
                             size_subpop = starting_pop,
                             I_per_subpop = index_pop,
@@ -97,13 +94,13 @@ odin_model <- initialize_odin(beta = beta_odin,
 ## Model execution
 We then run the model using these parameters and compare the outputs.
 
-```{run_model}
+```{r run_model, echo=TRUE, message=FALSE}
 siminf_result <- run(siminf_model)
 odin_result <- odin_model$run(tspan)
 
 ```
 
-```{plot_model, echo = F}
+```{r plot_model, echo = T, message = TRUE}
 siminf_tib <- convert_siminfU(siminf_result@U, times = tspan, comparts = c("S", "I")
                                , nmetapop = npop)
 
@@ -114,23 +111,37 @@ odin_tib <- odin_result %>% as_tibble %>%
   rename(times = step) %>%
   pivot_longer(-times, names_sep = "_", names_to = c("state", "metapop")) %>%
   mutate(metapop = as.numeric(metapop))
-```
 
-```{plot_siminf}
-siminf_tib %>%
-  ggplot(aes(x = times, y = value, colour = state)) +
-  geom_line() +
-  facet_wrap(metapop~., ncol = 10) +
-  labs(title = "SimInf")
+odin_dt = setDT(odin_tib)[, model := "Odin"]
+siminf_dt = setDT(siminf_tib)[, model := "SimInf"]
+
+all_results = rbindlist(list(odin_dt, siminf_dt), use.names = T)
 
 ```
 
-```{plot_odin}
-odin_tib %>%
-  ggplot(aes(x = times, y = value, colour = state)) +
+```{r plot_siminf}
+
+all_results |>
+  ggplot(aes(x = times, y = value, colour = state)) + 
   geom_line() +
-  facet_wrap(metapop~., ncol = 10) +
-  labs(title = "Odin")
+  facet_grid(metapop~model) + 
+  theme_bw()
+
+
+# siminf_tib %>%
+#   ggplot(aes(x = times, y = value, colour = state)) +
+#   geom_line() +
+#   facet_wrap(metapop~., ncol = 10) +
+#   labs(title = "SimInf")
+
+```
+
+```{r plot_odin}
+# odin_tib %>%
+#   ggplot(aes(x = times, y = value, colour = state)) +
+#   geom_line() +
+#   facet_wrap(metapop~., ncol = 10) +
+#   labs(title = "Odin")
 
 ```
 
@@ -139,11 +150,11 @@ To compare the model outputs while controlling for the stochasticity, we conduct
 
 We also conduct an equivalent deterministic simulation use *deSolve*
 
-```{set_nsims}
+```{r set_nsims}
 Nsims = 100
 ```
 
-```{run_multisims, echo = F}
+```{r run_multisims, echo = F}
 odin_runs <- odin_model$run(tspan_odin, replicate = Nsims)
 
 for(i in 1:Nsims){
@@ -177,7 +188,7 @@ for(i in 1:Nsims){
 # odin_multi
 ```
 
-```{deterministic_model, echo = F}
+```{r deterministic_model, echo = F}
 
 init <- c(S=pop_size - index_size,I=index_size)
 parameters <- c(bet=beta)
@@ -196,7 +207,7 @@ out.deSolve<-as.data.frame(out) %>%
 ```
 
 
-```{plot_multi, echo = F}
+```{r plot_multi, echo = F}
 rbind(siminf_multi %>%
   group_by(times, metapop, state) %>%
   summarise(mean = mean(value)
@@ -219,6 +230,7 @@ rbind(siminf_multi %>%
   geom_line(aes(y = hi, linetype = "range")) +
   facet_grid(metapop~state)
 ```
+
 ## Performance
 
 ## Poisson and timesteps (with performance)
