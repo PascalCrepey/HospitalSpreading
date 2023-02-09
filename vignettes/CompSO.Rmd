@@ -1,0 +1,224 @@
+---
+title: "Comparing SimInf and odin"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Comparing SimInf and odin for simulating epidemics on a network}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, include = F, eval = T}
+# library(HospitalSpreading)
+library(data.table)
+library(SimInf)
+library(magrittr)
+library(ggplot2)
+library(tidyverse)
+library(tictoc)
+
+source("~/SPHINx/HospitalSpreading/R/getSimInfModel.R", echo=TRUE)
+source("~/SPHINx/HospitalSpreading/R/siminf_supportFunctions.R", echo=TRUE)
+source("~/SPHINx/HospitalSpreading/R/initialize_odin.R", echo=TRUE)
+
+```
+
+## Context 
+
+HospitalSpreading simulates the spread of infection along a network representing patient transfers between connected hospitals. Two packages *SimInf* and *odin*, provide the functionality for the spread between metapopulations. Here we compare the performance and outputs across both of these models.
+
+The package *SimInf* runs using a Gillespie algorithm, and with migrations between metapopulations defined by a line-list of transfer events. The package *odin* runs using a chain binomial process, and with transfer events described by a transition matrix. 
+
+## Aim of this analysis
+
+We use the simplest compartmental model, SI, to represent the infection spreading in the population of each hospital. We ignore the processes of recovery, admission and discharge from hospitals. 
+
+Migration is defined as a matrix of daily patient transfers between any two hospitals, where the patients are selected randomly from among the infected or susceptible individuals. 
+
+## Parameters
+
+Here we describe and define each of the basic parameters which can run in each model.
+```{call_parameters}
+time_step = 0.01        # time step (for odin)
+beta = 0.5              # transmission rate
+
+tspan_max = 100         # final time step
+
+npop = 3                # number of hospitals
+
+pop_size = 100000       # starting population size of each hospital
+index_size = 100        # number of infected individuals in hospital 1
+```
+Each hospital is of size *pop_size*, The initial number infected in each hospital is 0 except hospital 1 where *index_size* are infected.
+
+```{hidden_parameters, include = F}
+
+
+tspan = 1:tspan_max # this is the number of time steps in integers
+
+#in order to effectively reduce the time step for odin, we must
+beta_odin = beta*time_step  #define a slower beta which operates in a shorter timestep
+tspan_odin = 1:(tspan_max/time_step) #define a longer number of time steps
+
+
+
+starting_pop = rep(pop_size, npop) #vector of starting population sizes
+index_pop = c(index_size, rep(0, npop - 1)) #vector of starting infected populations
+
+
+
+```
+## Transfer matrix
+We define a matrix of transfers between each hospital, and this is randomly chosen in this analysis.
+```{transfer_matrix}
+trans_mat = make_fake_matrix(nmetapop = npop, scale = 5)
+```
+
+## Model initialisation
+We define additional functions to initialise each of the two models using the same parameters and transition matrix.
+
+```{init_models}
+siminf_model <- getSimInfModel(beta = beta, tspan = tspan, npop = npop
+               , n_initial_infected = index_pop, starting_pop = starting_pop
+               , trans_mat = trans_mat)
+
+odin_model <- initialize_odin(beta = beta_odin,
+                            n_subpop = npop,
+                            size_subpop = starting_pop,
+                            I_per_subpop = index_pop,
+                            transfer_matrix = trans_mat)
+```
+## Model execution
+We then run the model using these parameters and compare the outputs.
+
+```{run_model}
+siminf_result <- run(siminf_model)
+odin_result <- odin_model$run(tspan)
+
+```
+
+```{plot_model, echo = F}
+siminf_tib <- convert_siminfU(siminf_result@U, times = tspan, comparts = c("S", "I")
+                               , nmetapop = npop)
+
+odin_tib <- odin_result %>% as_tibble %>%
+  select(step, starts_with("S"), starts_with("I")) %>%
+  rename_all(~gsub("\\[", "_", .x)) %>%
+  rename_all(~gsub("\\]", "", .x)) %>%
+  rename(times = step) %>%
+  pivot_longer(-times, names_sep = "_", names_to = c("state", "metapop")) %>%
+  mutate(metapop = as.numeric(metapop))
+```
+
+```{plot_siminf}
+siminf_tib %>%
+  ggplot(aes(x = times, y = value, colour = state)) +
+  geom_line() +
+  facet_wrap(metapop~., ncol = 10) +
+  labs(title = "SimInf")
+
+```
+
+```{plot_odin}
+odin_tib %>%
+  ggplot(aes(x = times, y = value, colour = state)) +
+  geom_line() +
+  facet_wrap(metapop~., ncol = 10) +
+  labs(title = "Odin")
+
+```
+
+## Across multiple simulations
+To compare the model outputs while controlling for the stochasticity, we conduct multiple simulations of each with the same parameters. 
+
+We also conduct an equivalent deterministic simulation use *deSolve*
+
+```{set_nsims}
+Nsims = 100
+```
+
+```{run_multisims, echo = F}
+odin_runs <- odin_model$run(tspan_odin, replicate = Nsims)
+
+for(i in 1:Nsims){
+
+  siminf_multi_piece <- convert_siminfU(run(siminf_model)@U, times = tspan, comparts = c("S", "I")
+                                        , nmetapop = npop) %>%
+    mutate(sim = i)
+
+  odin_multi_piece <- odin_runs[,,i] %>%
+    as_tibble %>%
+    select(step, starts_with("S"), starts_with("I")) %>%
+    rename_all(~gsub("\\[", "_", .x)) %>%
+    rename_all(~gsub("\\]", "", .x)) %>%
+    rename(times = step) %>%
+    pivot_longer(-times, names_sep = "_", names_to = c("state", "metapop")) %>%
+    mutate(metapop = as.numeric(metapop)
+           , sim = i)
+
+
+
+  if(i == 1){
+    siminf_multi <- siminf_multi_piece
+    odin_multi <- odin_multi_piece
+  } else {
+    siminf_multi <- rbind(siminf_multi, siminf_multi_piece)
+    odin_multi <- rbind(odin_multi, odin_multi_piece)
+  }
+}
+
+# siminf_multi
+# odin_multi
+```
+
+```{deterministic_model, echo = F}
+
+init <- c(S=pop_size - index_size,I=index_size)
+parameters <- c(bet=beta)
+
+eqn <- function(time,state,parameters){
+  with(as.list(c(state,parameters)),{
+    dS <- -bet*S*I/(S + I)
+    dI <- bet*S*I/(S + I)
+    return(list(c(dS,dI)))})}
+
+out<-ode(y=init,times=tspan,eqn,parms=parameters)
+out.deSolve<-as.data.frame(out) %>%
+  pivot_longer(-time, names_to = "state", values_to = "mean") %>%
+  mutate(metapop = 1, package = "deSolve") %>%
+  rename(times = time)
+```
+
+
+```{plot_multi, echo = F}
+rbind(siminf_multi %>%
+  group_by(times, metapop, state) %>%
+  summarise(mean = mean(value)
+            , lo = max(value)
+            , hi = min(value)) %>%
+    mutate(package = "SimInf")
+, odin_multi %>%
+  mutate(times = times*time_step) %>%
+  group_by(times, metapop, state) %>%
+  summarise(mean = mean(value)
+            , lo = max(value)
+            , hi = min(value)) %>%
+  mutate(package = "Odin")
+, out.deSolve) %>%
+  # filter(package != "Odin") %>%
+  filter(times < 30) %>%
+  ggplot(aes(x = times, colour = package)) +
+  geom_line(aes(y = mean, linetype = "mean")) +
+  geom_line(aes(y = lo, linetype = "range")) +
+  geom_line(aes(y = hi, linetype = "range")) +
+  facet_grid(metapop~state)
+```
+
+
+
