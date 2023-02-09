@@ -68,6 +68,14 @@ getSimInfModel <- function(tspan, npop, n_initial_infected, starting_pop, trans_
 
 
 
+#' Title
+#'
+#' @param model
+#'
+#' @return
+#' @export
+#'
+#' @examples
 benchmark_siminf <- function(model) {
   result <- run(model)
 
