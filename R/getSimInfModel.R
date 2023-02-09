@@ -1,8 +1,8 @@
-library(data.table)
-library(SimInf)
-library(magrittr)
-library(ggplot2)
-library(microbenchmark)
+# library(data.table)
+# library(SimInf)
+# library(magrittr)
+# library(ggplot2)
+# library(microbenchmark)
 
 getSimInfModel <- function(tspan, npop, n_initial_infected, starting_pop, trans_mat, beta) {
   ##################
