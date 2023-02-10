@@ -120,10 +120,27 @@ all_results |>
 
 ```
 
+<<<<<<< HEAD
+=======
+```{r plot_odin}
+# odin_tib %>%
+#   ggplot(aes(x = times, y = value, colour = state)) +
+#   geom_line() +
+#   facet_wrap(metapop~., ncol = 10) +
+#   labs(title = "Odin")
+
+```
+
+
+>>>>>>> d43008e7440327ace86be71092e5e79015743b60
 
 ## Time performance
 We use the package *microbenchmark* to compare the performance of each of these models over 10 simulations.
 ```{r runtime_tests, echo = T, eval = T}
+<<<<<<< HEAD
+=======
+
+>>>>>>> d43008e7440327ace86be71092e5e79015743b60
 print(benchmark_siminf(siminf_model, nRun = 10))
 print(benchmark_odin(odin_model, times = tspan_odin, nRun = 10))
 ```
@@ -135,6 +152,13 @@ To compare the model outputs while controlling for the stochasticity, we conduct
 
 We also conduct an equivalent deterministic simulation use *deSolve*
 
+<<<<<<< HEAD
+=======
+
+```{r init_multi_models}
+
+Nsims = 100
+>>>>>>> d43008e7440327ace86be71092e5e79015743b60
 
 ```{r init_multi_models, message = F}
 Nsims = 100
@@ -205,7 +229,11 @@ out.deSolve<-as.data.frame(out) %>%
 
 
 
+<<<<<<< HEAD
 ```{r plot_multi, echo = F, eval = T, fig.width = 7}
+=======
+```{r plot_multi, echo = F, eval = T}
+>>>>>>> d43008e7440327ace86be71092e5e79015743b60
 
 rbind(siminf_multi %>%
   group_by(times, metapop, state) %>%
@@ -323,7 +351,11 @@ for(i in 1:Nsims){
 ```
 
 
+<<<<<<< HEAD
 ```{r plot_poisson, eval = T, message=FALSE, echo=FALSE, fig.width = 7}
+=======
+```{r plot_poisson, eval = T, message=FALSE, echo=FALSE}
+>>>>>>> d43008e7440327ace86be71092e5e79015743b60
 rbind(siminf_multi %>%
   group_by(times, metapop, state) %>%
   summarise(mean = mean(value)
