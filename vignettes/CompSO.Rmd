@@ -111,36 +111,16 @@ all_results = rbindlist(list(odin_dt, siminf_dt), use.names = T)
 ```
 
 ```{r plot_siminf, echo = F, fig.width = 7}
-
 all_results |>
   ggplot(aes(x = times, y = value, colour = state)) + 
   geom_line() +
   facet_grid(metapop~model) + 
   theme_bw()
-
 ```
-
-<<<<<<< HEAD
-=======
-```{r plot_odin}
-# odin_tib %>%
-#   ggplot(aes(x = times, y = value, colour = state)) +
-#   geom_line() +
-#   facet_wrap(metapop~., ncol = 10) +
-#   labs(title = "Odin")
-
-```
-
-
->>>>>>> d43008e7440327ace86be71092e5e79015743b60
 
 ## Time performance
 We use the package *microbenchmark* to compare the performance of each of these models over 10 simulations.
 ```{r runtime_tests, echo = T, eval = T}
-<<<<<<< HEAD
-=======
-
->>>>>>> d43008e7440327ace86be71092e5e79015743b60
 print(benchmark_siminf(siminf_model, nRun = 10))
 print(benchmark_odin(odin_model, times = tspan_odin, nRun = 10))
 ```
@@ -151,14 +131,6 @@ print(benchmark_odin(odin_model, times = tspan_odin, nRun = 10))
 To compare the model outputs while controlling for the stochasticity, we conduct multiple simulations of each with the same parameters. We compare over a simulation in a single hospital with no migration. 
 
 We also conduct an equivalent deterministic simulation use *deSolve*
-
-<<<<<<< HEAD
-=======
-
-```{r init_multi_models}
-
-Nsims = 100
->>>>>>> d43008e7440327ace86be71092e5e79015743b60
 
 ```{r init_multi_models, message = F}
 Nsims = 100
@@ -229,12 +201,7 @@ out.deSolve<-as.data.frame(out) %>%
 
 
 
-<<<<<<< HEAD
 ```{r plot_multi, echo = F, eval = T, fig.width = 7}
-=======
-```{r plot_multi, echo = F, eval = T}
->>>>>>> d43008e7440327ace86be71092e5e79015743b60
-
 rbind(siminf_multi %>%
   group_by(times, metapop, state) %>%
   summarise(mean = mean(value)
@@ -351,11 +318,7 @@ for(i in 1:Nsims){
 ```
 
 
-<<<<<<< HEAD
 ```{r plot_poisson, eval = T, message=FALSE, echo=FALSE, fig.width = 7}
-=======
-```{r plot_poisson, eval = T, message=FALSE, echo=FALSE}
->>>>>>> d43008e7440327ace86be71092e5e79015743b60
 rbind(siminf_multi %>%
   group_by(times, metapop, state) %>%
   summarise(mean = mean(value)
@@ -401,7 +364,6 @@ rbind(siminf_multi %>%
 We also compare the runtime of each over 10 runs.
 
 ```{r runtime_poisson, echo = T, eval = T}
-
 print(benchmark_odin(odin_model_poisson, times = tspan_odin, nRun = 10))
 print(benchmark_odin(odin_model_binomial5, times = tspan_odin, nRun = 10))
 print(benchmark_odin(odin_model_binomial100, times = tspan_odin, nRun = 10))
