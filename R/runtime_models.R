@@ -7,11 +7,12 @@
 #' @export
 #'
 #' @importFrom microbenchmark microbenchmark
+#' @importFrom SimInf run
 #'
 benchmark_siminf <- function(model, nRun) {
   result <- run(model)
   results <- microbenchmark::microbenchmark(
-    SimInfResult = run(model),
+    SimInfResult = SimInf::run(model),
     times = nRun)
 
   return(results)
