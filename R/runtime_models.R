@@ -6,9 +6,11 @@
 #' @return results of the benchmark
 #' @export
 #'
+#' @importFrom microbenchmark microbenchmark
+#'
 benchmark_siminf <- function(model, nRun) {
   result <- run(model)
-  results <- microbenchmark(
+  results <- microbenchmark::microbenchmark(
     SimInfResult = run(model),
     times = nRun)
 
@@ -25,8 +27,10 @@ benchmark_siminf <- function(model, nRun) {
 #' @return the result of the benchmark
 #' @export
 #'
+#' @importFrom microbenchmark microbenchmark
+#'
 benchmark_odin <- function(model, times, nRun) {
-  results <- microbenchmark(
+  results <- microbenchmark::microbenchmark(
     odinResult = model$run(times, replicate = 1),
     times = nRun)
 

@@ -2,16 +2,16 @@
 
 #' Initialize the Odin model
 #'
-#' @param beta
+#' @param beta the probability of infection
 #' @param n_subpop number of subpopulation
-#' @param size_subpop
-#' @param transfer_matrix
-#' @param I_per_subpop
+#' @param size_subpop the size of the subpopulations
+#' @param transfer_matrix the transfer matrix
+#' @param I_per_subpop the initially infected in each subpopulation
 #'
-#' @return
+#' @return an Odin model
 #' @export
+#' @importFrom odin odin
 #'
-#' @examples
 initialize_odin_binomial <- function(beta,
                  n_subpop,
                  size_subpop,
@@ -102,16 +102,15 @@ initialize_odin_binomial <- function(beta,
 
 #' Initialize the Odin model
 #'
-#' @param beta
+#' @param beta the probability of infection
 #' @param n_subpop number of subpopulation
-#' @param size_subpop
-#' @param transfer_matrix
-#' @param I_per_subpop
+#' @param size_subpop the size of the subpopulations
+#' @param transfer_matrix the transfer matrix
+#' @param I_per_subpop the number of infecetd in each subpopulation
 #'
-#' @return
+#' @return an Odin model
 #' @export
 #'
-#' @examples
 initialize_odin_poisson <- function(beta,
                                      n_subpop,
                                      size_subpop,

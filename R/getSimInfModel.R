@@ -2,18 +2,17 @@
 
 #' Create the SimInf model
 #'
-#' @param tspan
-#' @param npop
-#' @param n_initial_infected
-#' @param starting_pop
-#' @param trans_mat
-#' @param beta
+#' @param tspan the time vector
+#' @param npop the number of subpopulation
+#' @param n_initial_infected the number of initially infected individuals
+#' @param starting_pop the initial state
+#' @param trans_mat the transfer matrix
+#' @param beta the probability of infection
 #'
-#' @return
+#' @return a SimInf model
 #' @export
 #'
 #' @importFrom SimInf mparse
-#' @examples
 getSimInfModel = function(tspan,
                            npop,
                            n_initial_infected,
@@ -84,14 +83,13 @@ getSimInfModel = function(tspan,
 
 
 
-#' Title
+#' Benchmark a siminf model
 #'
 #' @param model
 #'
-#' @return
+#' @return the results of the benchmarck
 #' @export
 #'
-#' @examples
 benchmark_siminf <- function(model) {
   result <- run(model)
 

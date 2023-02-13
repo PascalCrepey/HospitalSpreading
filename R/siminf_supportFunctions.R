@@ -7,7 +7,6 @@
 #' @return transfer matrix
 #' @export
 #'
-#' @examples
 make_fake_matrix <- function(nmetapop, scale = 5){
   # set.seed(1)
   output <- matrix(0, nrow = nmetapop, ncol = nmetapop)
@@ -39,7 +38,6 @@ make_fake_matrix <- function(nmetapop, scale = 5){
 #' @return data frame of events
 #' @export
 #'
-#' @examples
 make_siminf_events <- function(times, nmetapop, transfer_matrix, select = 1, shift = 0){
   events <- data.frame(
     event      = 3,  ## Event "extTrans" is a movement between nodes// 0) exit, 1) enter, 2) internal transfer, and 3) external transfer
@@ -69,16 +67,11 @@ make_siminf_events <- function(times, nmetapop, transfer_matrix, select = 1, shi
 #' @return data frame with columns for time, metapopulation, state compartment and the value of the variable
 #' @export
 #'
-#' @examples
 convert_siminfU <- function(U, times, comparts, nmetapop){
-  U %>%
-    t %>%
-    as.vector %>%
-    {data.frame(times = rep(times, times = nmetapop*length(comparts))
-                , metapop = rep(1:nmetapop, each = length(comparts)*length(times))
-                , state = rep(rep(comparts, each = length(times)), times = nmetapop)
-                , value = .)
-    }
+  data.frame(times = rep(times, times = nmetapop*length(comparts)),
+             metapop = rep(1:nmetapop, each = length(comparts)*length(times)),
+             state = rep(rep(comparts, each = length(times)), times = nmetapop),
+             value = U |> t() |> as.vector())
 
 }
 

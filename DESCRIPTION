@@ -17,16 +17,19 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
 Imports: 
-    data.table,
-    dde,
-    ggplot2,
-    magrittr,
     microbenchmark,
     odin,
     SimInf
 Suggests: 
     knitr,
+    ggplot2,
     rmarkdown,
+    deSolve,
+    tictoc,
+    tidyverse,
+    data.table,
+    magrittr,
+    dde,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 VignetteBuilder: knitr
