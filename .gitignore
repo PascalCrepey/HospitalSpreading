@@ -3,3 +3,6 @@
 .RData
 .Ruserdata
 inst/doc
+.DS_Store
+src/registration.o
+src/odin.o
