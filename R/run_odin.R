@@ -22,20 +22,18 @@ run_simulation = function(initialized_model, t_max, time_step, replicate) {
   #   - Dimension 2: Timesteps
   #   - Dimension 3: Simulation number
   prevalence = simulations[,grepl("^I\\[[0-9]+\\]$", colnames(simulations)),]
-  prevalence = aperm(prevalence, c(2,1,3))
-  dimnames(prevalence)[[2]] = paste0("t_", simulations[,1,1])
+  dimnames(prevalence)[[1]] = paste0("t_", simulations[,1,1])
 
   # Get array of incidence
   #   - Dimension 1: Supopulations
   #   - Dimension 2: Timesteps
   #   - Dimension 3: Simulation number
   incidence = simulations[,grepl("new_I\\[[0-9]+\\]$", colnames(simulations)),]
-  incidence = aperm(incidence, c(2,1,3))
-  dimnames(incidence)[[2]] = paste0("t_", simulations[,1,1])
+  dimnames(incidence)[[1]] = paste0("t_", simulations[,1,1])
 
   # Get list of arrays of transfers
-  transfers_I = lapply(dim(simulations)[3], function(x)
-    getTransitionMatrix(simulations[,,x], initialized_model$contents()$dim_N)
+  transfers_I = lapply(asplit(simulations,3), function(x)
+    getTransitionMatrix(x, initialized_model$contents()$dim_N)
     )
 
   # Return output
