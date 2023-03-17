@@ -33,8 +33,6 @@ typedef struct odin_stoch_model_si_binom_internal {
   double *N;
   int n_hospitals;
   double *new_I;
-  int offset_output_t_I_in;
-  int offset_output_t_S_in;
   double *s_initial;
   double *t_I;
   double *t_I_in;
@@ -81,6 +79,48 @@ typedef struct odin_stoch_model_si_poisson_internal {
   double *t_S_in;
   double *t_S_out;
 } odin_stoch_model_si_poisson_internal;
+typedef struct odin_stoch_model_sis_binom_internal {
+  double alpha;
+  double beta;
+  double com_p;
+  double *d;
+  int dim_d;
+  int dim_d_1;
+  int dim_d_2;
+  int dim_I;
+  int dim_i_initial;
+  int dim_N;
+  int dim_new_I;
+  int dim_S;
+  int dim_s_initial;
+  int dim_t_I;
+  int dim_t_I_1;
+  int dim_t_I_2;
+  int dim_t_I_in;
+  int dim_t_I_out;
+  int dim_t_S;
+  int dim_t_S_1;
+  int dim_t_S_2;
+  int dim_t_S_in;
+  int dim_t_S_out;
+  double *i_initial;
+  double *initial_I;
+  double *initial_S;
+  double *N;
+  int n_subpop;
+  double *new_I;
+  int offset_output_t_I_in;
+  int offset_output_t_S_in;
+  double *s_initial;
+  double *t_I;
+  double *t_I_in;
+  double *t_I_out;
+  double *t_S;
+  double *t_S_in;
+  double *t_S_out;
+  double w_in;
+  double w_out;
+} odin_stoch_model_sis_binom_internal;
 odin_stoch_model_si_binom_internal* odin_stoch_model_si_binom_get_internal(SEXP internal_p, int closed_error);
 static void odin_stoch_model_si_binom_finalise(SEXP internal_p);
 SEXP odin_stoch_model_si_binom_create(SEXP user);
@@ -105,6 +145,18 @@ SEXP odin_stoch_model_si_poisson_initial_conditions(SEXP internal_p, SEXP step_p
 void odin_stoch_model_si_poisson_rhs(odin_stoch_model_si_poisson_internal* internal, size_t step, double * state, double * state_next, double * output);
 void odin_stoch_model_si_poisson_rhs_dde(size_t n_eq, size_t step, double * state, double * state_next, size_t n_out, double * output, void * internal);
 SEXP odin_stoch_model_si_poisson_rhs_r(SEXP internal_p, SEXP step, SEXP state);
+odin_stoch_model_sis_binom_internal* odin_stoch_model_sis_binom_get_internal(SEXP internal_p, int closed_error);
+static void odin_stoch_model_sis_binom_finalise(SEXP internal_p);
+SEXP odin_stoch_model_sis_binom_create(SEXP user);
+void odin_stoch_model_sis_binom_initmod_desolve(void(* odeparms) (int *, double *));
+SEXP odin_stoch_model_sis_binom_contents(SEXP internal_p);
+SEXP odin_stoch_model_sis_binom_set_user(SEXP internal_p, SEXP user);
+SEXP odin_stoch_model_sis_binom_set_initial(SEXP internal_p, SEXP step_ptr, SEXP state_ptr);
+SEXP odin_stoch_model_sis_binom_metadata(SEXP internal_p);
+SEXP odin_stoch_model_sis_binom_initial_conditions(SEXP internal_p, SEXP step_ptr);
+void odin_stoch_model_sis_binom_rhs(odin_stoch_model_sis_binom_internal* internal, size_t step, double * state, double * state_next, double * output);
+void odin_stoch_model_sis_binom_rhs_dde(size_t n_eq, size_t step, double * state, double * state_next, size_t n_out, double * output, void * internal);
+SEXP odin_stoch_model_sis_binom_rhs_r(SEXP internal_p, SEXP step, SEXP state);
 double user_get_scalar_double(SEXP user, const char *name,
                               double default_value, double min, double max);
 int user_get_scalar_int(SEXP user, const char *name,
@@ -197,7 +249,7 @@ void odin_stoch_model_si_binom_initmod_desolve(void(* odeparms) (int *, double *
 }
 SEXP odin_stoch_model_si_binom_contents(SEXP internal_p) {
   odin_stoch_model_si_binom_internal *internal = odin_stoch_model_si_binom_get_internal(internal_p, 1);
-  SEXP contents = PROTECT(allocVector(VECSXP, 36));
+  SEXP contents = PROTECT(allocVector(VECSXP, 34));
   SET_VECTOR_ELT(contents, 0, ScalarReal(internal->beta));
   SEXP d = PROTECT(allocVector(REALSXP, internal->dim_d));
   memcpy(REAL(d), internal->d, internal->dim_d * sizeof(double));
@@ -238,32 +290,30 @@ SEXP odin_stoch_model_si_binom_contents(SEXP internal_p) {
   SEXP new_I = PROTECT(allocVector(REALSXP, internal->dim_new_I));
   memcpy(REAL(new_I), internal->new_I, internal->dim_new_I * sizeof(double));
   SET_VECTOR_ELT(contents, 26, new_I);
-  SET_VECTOR_ELT(contents, 27, ScalarInteger(internal->offset_output_t_I_in));
-  SET_VECTOR_ELT(contents, 28, ScalarInteger(internal->offset_output_t_S_in));
   SEXP s_initial = PROTECT(allocVector(REALSXP, internal->dim_s_initial));
   memcpy(REAL(s_initial), internal->s_initial, internal->dim_s_initial * sizeof(double));
-  SET_VECTOR_ELT(contents, 29, s_initial);
+  SET_VECTOR_ELT(contents, 27, s_initial);
   SEXP t_I = PROTECT(allocVector(REALSXP, internal->dim_t_I));
   memcpy(REAL(t_I), internal->t_I, internal->dim_t_I * sizeof(double));
   odin_set_dim(t_I, 2, internal->dim_t_I_1, internal->dim_t_I_2);
-  SET_VECTOR_ELT(contents, 30, t_I);
+  SET_VECTOR_ELT(contents, 28, t_I);
   SEXP t_I_in = PROTECT(allocVector(REALSXP, internal->dim_t_I_in));
   memcpy(REAL(t_I_in), internal->t_I_in, internal->dim_t_I_in * sizeof(double));
-  SET_VECTOR_ELT(contents, 31, t_I_in);
+  SET_VECTOR_ELT(contents, 29, t_I_in);
   SEXP t_I_out = PROTECT(allocVector(REALSXP, internal->dim_t_I_out));
   memcpy(REAL(t_I_out), internal->t_I_out, internal->dim_t_I_out * sizeof(double));
-  SET_VECTOR_ELT(contents, 32, t_I_out);
+  SET_VECTOR_ELT(contents, 30, t_I_out);
   SEXP t_S = PROTECT(allocVector(REALSXP, internal->dim_t_S));
   memcpy(REAL(t_S), internal->t_S, internal->dim_t_S * sizeof(double));
   odin_set_dim(t_S, 2, internal->dim_t_S_1, internal->dim_t_S_2);
-  SET_VECTOR_ELT(contents, 33, t_S);
+  SET_VECTOR_ELT(contents, 31, t_S);
   SEXP t_S_in = PROTECT(allocVector(REALSXP, internal->dim_t_S_in));
   memcpy(REAL(t_S_in), internal->t_S_in, internal->dim_t_S_in * sizeof(double));
-  SET_VECTOR_ELT(contents, 34, t_S_in);
+  SET_VECTOR_ELT(contents, 32, t_S_in);
   SEXP t_S_out = PROTECT(allocVector(REALSXP, internal->dim_t_S_out));
   memcpy(REAL(t_S_out), internal->t_S_out, internal->dim_t_S_out * sizeof(double));
-  SET_VECTOR_ELT(contents, 35, t_S_out);
-  SEXP nms = PROTECT(allocVector(STRSXP, 36));
+  SET_VECTOR_ELT(contents, 33, t_S_out);
+  SEXP nms = PROTECT(allocVector(STRSXP, 34));
   SET_STRING_ELT(nms, 0, mkChar("beta"));
   SET_STRING_ELT(nms, 1, mkChar("d"));
   SET_STRING_ELT(nms, 2, mkChar("dim_d"));
@@ -291,15 +341,13 @@ SEXP odin_stoch_model_si_binom_contents(SEXP internal_p) {
   SET_STRING_ELT(nms, 24, mkChar("N"));
   SET_STRING_ELT(nms, 25, mkChar("n_hospitals"));
   SET_STRING_ELT(nms, 26, mkChar("new_I"));
-  SET_STRING_ELT(nms, 27, mkChar("offset_output_t_I_in"));
-  SET_STRING_ELT(nms, 28, mkChar("offset_output_t_S_in"));
-  SET_STRING_ELT(nms, 29, mkChar("s_initial"));
-  SET_STRING_ELT(nms, 30, mkChar("t_I"));
-  SET_STRING_ELT(nms, 31, mkChar("t_I_in"));
-  SET_STRING_ELT(nms, 32, mkChar("t_I_out"));
-  SET_STRING_ELT(nms, 33, mkChar("t_S"));
-  SET_STRING_ELT(nms, 34, mkChar("t_S_in"));
-  SET_STRING_ELT(nms, 35, mkChar("t_S_out"));
+  SET_STRING_ELT(nms, 27, mkChar("s_initial"));
+  SET_STRING_ELT(nms, 28, mkChar("t_I"));
+  SET_STRING_ELT(nms, 29, mkChar("t_I_in"));
+  SET_STRING_ELT(nms, 30, mkChar("t_I_out"));
+  SET_STRING_ELT(nms, 31, mkChar("t_S"));
+  SET_STRING_ELT(nms, 32, mkChar("t_S_in"));
+  SET_STRING_ELT(nms, 33, mkChar("t_S_out"));
   setAttrib(contents, R_NamesSymbol, nms);
   UNPROTECT(15);
   return contents;
@@ -344,8 +392,6 @@ SEXP odin_stoch_model_si_binom_set_user(SEXP internal_p, SEXP user) {
   internal->dim_t_I = internal->dim_t_I_1 * internal->dim_t_I_2;
   internal->dim_t_S = internal->dim_t_S_1 * internal->dim_t_S_2;
   internal->i_initial = (double*) user_get_array(user, false, internal->i_initial, "i_initial", NA_REAL, NA_REAL, 1, internal->dim_i_initial);
-  internal->offset_output_t_I_in = internal->dim_t_I_out + internal->dim_t_S_in + internal->dim_t_S_out;
-  internal->offset_output_t_S_in = internal->dim_t_I_out + internal->dim_t_S_out;
   internal->s_initial = (double*) user_get_array(user, false, internal->s_initial, "s_initial", NA_REAL, NA_REAL, 1, internal->dim_s_initial);
   R_Free(internal->t_I);
   internal->t_I = (double*) R_Calloc(internal->dim_t_I, double);
@@ -381,20 +427,19 @@ SEXP odin_stoch_model_si_binom_metadata(SEXP internal_p) {
   SET_STRING_ELT(variable_names, 1, mkChar("I"));
   SET_VECTOR_ELT(ret, 0, variable_length);
   UNPROTECT(2);
-  SEXP output_length = PROTECT(allocVector(VECSXP, 4));
-  SEXP output_names = PROTECT(allocVector(STRSXP, 4));
+  SEXP output_length = PROTECT(allocVector(VECSXP, 2));
+  SEXP output_names = PROTECT(allocVector(STRSXP, 2));
   setAttrib(output_length, R_NamesSymbol, output_names);
-  SET_VECTOR_ELT(output_length, 0, ScalarInteger(internal->dim_t_S_out));
-  SET_VECTOR_ELT(output_length, 1, ScalarInteger(internal->dim_t_I_out));
-  SET_VECTOR_ELT(output_length, 2, ScalarInteger(internal->dim_t_S_in));
-  SET_VECTOR_ELT(output_length, 3, ScalarInteger(internal->dim_t_I_in));
-  SET_STRING_ELT(output_names, 0, mkChar("t_S_out"));
-  SET_STRING_ELT(output_names, 1, mkChar("t_I_out"));
-  SET_STRING_ELT(output_names, 2, mkChar("t_S_in"));
-  SET_STRING_ELT(output_names, 3, mkChar("t_I_in"));
+  SET_VECTOR_ELT(output_length, 0, ScalarInteger(internal->dim_new_I));
+  SET_VECTOR_ELT(output_length, 1, allocVector(INTSXP, 2));
+  int * dim_t_I = INTEGER(VECTOR_ELT(output_length, 1));
+  dim_t_I[0] = internal->dim_t_I_1;
+  dim_t_I[1] = internal->dim_t_I_2;
+  SET_STRING_ELT(output_names, 0, mkChar("new_I"));
+  SET_STRING_ELT(output_names, 1, mkChar("t_I"));
   SET_VECTOR_ELT(ret, 1, output_length);
   UNPROTECT(2);
-  SET_VECTOR_ELT(ret, 2, ScalarInteger(internal->dim_t_I_in + internal->dim_t_I_out + internal->dim_t_S_in + internal->dim_t_S_out));
+  SET_VECTOR_ELT(ret, 2, ScalarInteger(internal->dim_new_I + internal->dim_t_I));
   UNPROTECT(2);
   return ret;
 }
@@ -444,10 +489,8 @@ void odin_stoch_model_si_binom_rhs(odin_stoch_model_si_binom_internal* internal,
   for (int i = 1; i <= internal->dim_I; ++i) {
     state_next[internal->dim_S + i - 1] = I[i - 1] + internal->new_I[i - 1] - internal->t_I_out[i - 1] + internal->t_I_in[i - 1];
   }
-  memcpy(output + internal->offset_output_t_S_in, internal->t_S_in, internal->dim_t_S_in * sizeof(double));
-  memcpy(output + 0, internal->t_S_out, internal->dim_t_S_out * sizeof(double));
-  memcpy(output + internal->offset_output_t_I_in, internal->t_I_in, internal->dim_t_I_in * sizeof(double));
-  memcpy(output + internal->dim_t_S_out, internal->t_I_out, internal->dim_t_I_out * sizeof(double));
+  memcpy(output + 0, internal->new_I, internal->dim_new_I * sizeof(double));
+  memcpy(output + internal->dim_new_I, internal->t_I, internal->dim_t_I * sizeof(double));
 }
 void odin_stoch_model_si_binom_rhs_dde(size_t n_eq, size_t step, double * state, double * state_next, size_t n_out, double * output, void * internal) {
   odin_stoch_model_si_binom_rhs((odin_stoch_model_si_binom_internal*)internal, step, state, state_next, output);
@@ -455,7 +498,7 @@ void odin_stoch_model_si_binom_rhs_dde(size_t n_eq, size_t step, double * state,
 SEXP odin_stoch_model_si_binom_rhs_r(SEXP internal_p, SEXP step, SEXP state) {
   SEXP state_next = PROTECT(allocVector(REALSXP, LENGTH(state)));
   odin_stoch_model_si_binom_internal *internal = odin_stoch_model_si_binom_get_internal(internal_p, 1);
-  SEXP output_ptr = PROTECT(allocVector(REALSXP, internal->dim_t_I_in + internal->dim_t_I_out + internal->dim_t_S_in + internal->dim_t_S_out));
+  SEXP output_ptr = PROTECT(allocVector(REALSXP, internal->dim_new_I + internal->dim_t_I));
   setAttrib(state_next, install("output"), output_ptr);
   UNPROTECT(1);
   double *output = REAL(output_ptr);
@@ -796,6 +839,354 @@ SEXP odin_stoch_model_si_poisson_rhs_r(SEXP internal_p, SEXP step, SEXP state) {
   double *output = REAL(output_ptr);
   GetRNGstate();
   odin_stoch_model_si_poisson_rhs(internal, scalar_int(step, "step"), REAL(state), REAL(state_next), output);
+  PutRNGstate();
+  UNPROTECT(1);
+  return state_next;
+}
+odin_stoch_model_sis_binom_internal* odin_stoch_model_sis_binom_get_internal(SEXP internal_p, int closed_error) {
+  odin_stoch_model_sis_binom_internal *internal = NULL;
+  if (TYPEOF(internal_p) != EXTPTRSXP) {
+    Rf_error("Expected an external pointer");
+  }
+  internal = (odin_stoch_model_sis_binom_internal*) R_ExternalPtrAddr(internal_p);
+  if (!internal && closed_error) {
+    Rf_error("Pointer has been invalidated");
+  }
+  return internal;
+}
+void odin_stoch_model_sis_binom_finalise(SEXP internal_p) {
+  odin_stoch_model_sis_binom_internal *internal = odin_stoch_model_sis_binom_get_internal(internal_p, 0);
+  if (internal_p) {
+    R_Free(internal->d);
+    R_Free(internal->i_initial);
+    R_Free(internal->initial_I);
+    R_Free(internal->initial_S);
+    R_Free(internal->N);
+    R_Free(internal->new_I);
+    R_Free(internal->s_initial);
+    R_Free(internal->t_I);
+    R_Free(internal->t_I_in);
+    R_Free(internal->t_I_out);
+    R_Free(internal->t_S);
+    R_Free(internal->t_S_in);
+    R_Free(internal->t_S_out);
+    R_Free(internal);
+    R_ClearExternalPtr(internal_p);
+  }
+}
+SEXP odin_stoch_model_sis_binom_create(SEXP user) {
+  odin_stoch_model_sis_binom_internal *internal = (odin_stoch_model_sis_binom_internal*) R_Calloc(1, odin_stoch_model_sis_binom_internal);
+  internal->d = NULL;
+  internal->i_initial = NULL;
+  internal->initial_I = NULL;
+  internal->initial_S = NULL;
+  internal->N = NULL;
+  internal->new_I = NULL;
+  internal->s_initial = NULL;
+  internal->t_I = NULL;
+  internal->t_I_in = NULL;
+  internal->t_I_out = NULL;
+  internal->t_S = NULL;
+  internal->t_S_in = NULL;
+  internal->t_S_out = NULL;
+  internal->alpha = NA_REAL;
+  internal->beta = NA_REAL;
+  internal->com_p = NA_REAL;
+  internal->d = NULL;
+  internal->i_initial = NULL;
+  internal->N = NULL;
+  internal->n_subpop = NA_INTEGER;
+  internal->s_initial = NULL;
+  internal->w_in = NA_REAL;
+  internal->w_out = NA_REAL;
+  SEXP ptr = PROTECT(R_MakeExternalPtr(internal, R_NilValue, R_NilValue));
+  R_RegisterCFinalizer(ptr, odin_stoch_model_sis_binom_finalise);
+  UNPROTECT(1);
+  return ptr;
+}
+static odin_stoch_model_sis_binom_internal *odin_stoch_model_sis_binom_internal_ds;
+void odin_stoch_model_sis_binom_initmod_desolve(void(* odeparms) (int *, double *)) {
+  static DL_FUNC get_desolve_gparms = NULL;
+  if (get_desolve_gparms == NULL) {
+    get_desolve_gparms =
+      R_GetCCallable("deSolve", "get_deSolve_gparms");
+  }
+  odin_stoch_model_sis_binom_internal_ds = odin_stoch_model_sis_binom_get_internal(get_desolve_gparms(), 1);
+}
+SEXP odin_stoch_model_sis_binom_contents(SEXP internal_p) {
+  odin_stoch_model_sis_binom_internal *internal = odin_stoch_model_sis_binom_get_internal(internal_p, 1);
+  SEXP contents = PROTECT(allocVector(VECSXP, 40));
+  SET_VECTOR_ELT(contents, 0, ScalarReal(internal->alpha));
+  SET_VECTOR_ELT(contents, 1, ScalarReal(internal->beta));
+  SET_VECTOR_ELT(contents, 2, ScalarReal(internal->com_p));
+  SEXP d = PROTECT(allocVector(REALSXP, internal->dim_d));
+  memcpy(REAL(d), internal->d, internal->dim_d * sizeof(double));
+  odin_set_dim(d, 2, internal->dim_d_1, internal->dim_d_2);
+  SET_VECTOR_ELT(contents, 3, d);
+  SET_VECTOR_ELT(contents, 4, ScalarInteger(internal->dim_d));
+  SET_VECTOR_ELT(contents, 5, ScalarInteger(internal->dim_d_1));
+  SET_VECTOR_ELT(contents, 6, ScalarInteger(internal->dim_d_2));
+  SET_VECTOR_ELT(contents, 7, ScalarInteger(internal->dim_I));
+  SET_VECTOR_ELT(contents, 8, ScalarInteger(internal->dim_i_initial));
+  SET_VECTOR_ELT(contents, 9, ScalarInteger(internal->dim_N));
+  SET_VECTOR_ELT(contents, 10, ScalarInteger(internal->dim_new_I));
+  SET_VECTOR_ELT(contents, 11, ScalarInteger(internal->dim_S));
+  SET_VECTOR_ELT(contents, 12, ScalarInteger(internal->dim_s_initial));
+  SET_VECTOR_ELT(contents, 13, ScalarInteger(internal->dim_t_I));
+  SET_VECTOR_ELT(contents, 14, ScalarInteger(internal->dim_t_I_1));
+  SET_VECTOR_ELT(contents, 15, ScalarInteger(internal->dim_t_I_2));
+  SET_VECTOR_ELT(contents, 16, ScalarInteger(internal->dim_t_I_in));
+  SET_VECTOR_ELT(contents, 17, ScalarInteger(internal->dim_t_I_out));
+  SET_VECTOR_ELT(contents, 18, ScalarInteger(internal->dim_t_S));
+  SET_VECTOR_ELT(contents, 19, ScalarInteger(internal->dim_t_S_1));
+  SET_VECTOR_ELT(contents, 20, ScalarInteger(internal->dim_t_S_2));
+  SET_VECTOR_ELT(contents, 21, ScalarInteger(internal->dim_t_S_in));
+  SET_VECTOR_ELT(contents, 22, ScalarInteger(internal->dim_t_S_out));
+  SEXP i_initial = PROTECT(allocVector(REALSXP, internal->dim_i_initial));
+  memcpy(REAL(i_initial), internal->i_initial, internal->dim_i_initial * sizeof(double));
+  SET_VECTOR_ELT(contents, 23, i_initial);
+  SEXP initial_I = PROTECT(allocVector(REALSXP, internal->dim_I));
+  memcpy(REAL(initial_I), internal->initial_I, internal->dim_I * sizeof(double));
+  SET_VECTOR_ELT(contents, 24, initial_I);
+  SEXP initial_S = PROTECT(allocVector(REALSXP, internal->dim_S));
+  memcpy(REAL(initial_S), internal->initial_S, internal->dim_S * sizeof(double));
+  SET_VECTOR_ELT(contents, 25, initial_S);
+  SEXP N = PROTECT(allocVector(REALSXP, internal->dim_N));
+  memcpy(REAL(N), internal->N, internal->dim_N * sizeof(double));
+  SET_VECTOR_ELT(contents, 26, N);
+  SET_VECTOR_ELT(contents, 27, ScalarInteger(internal->n_subpop));
+  SEXP new_I = PROTECT(allocVector(REALSXP, internal->dim_new_I));
+  memcpy(REAL(new_I), internal->new_I, internal->dim_new_I * sizeof(double));
+  SET_VECTOR_ELT(contents, 28, new_I);
+  SET_VECTOR_ELT(contents, 29, ScalarInteger(internal->offset_output_t_I_in));
+  SET_VECTOR_ELT(contents, 30, ScalarInteger(internal->offset_output_t_S_in));
+  SEXP s_initial = PROTECT(allocVector(REALSXP, internal->dim_s_initial));
+  memcpy(REAL(s_initial), internal->s_initial, internal->dim_s_initial * sizeof(double));
+  SET_VECTOR_ELT(contents, 31, s_initial);
+  SEXP t_I = PROTECT(allocVector(REALSXP, internal->dim_t_I));
+  memcpy(REAL(t_I), internal->t_I, internal->dim_t_I * sizeof(double));
+  odin_set_dim(t_I, 2, internal->dim_t_I_1, internal->dim_t_I_2);
+  SET_VECTOR_ELT(contents, 32, t_I);
+  SEXP t_I_in = PROTECT(allocVector(REALSXP, internal->dim_t_I_in));
+  memcpy(REAL(t_I_in), internal->t_I_in, internal->dim_t_I_in * sizeof(double));
+  SET_VECTOR_ELT(contents, 33, t_I_in);
+  SEXP t_I_out = PROTECT(allocVector(REALSXP, internal->dim_t_I_out));
+  memcpy(REAL(t_I_out), internal->t_I_out, internal->dim_t_I_out * sizeof(double));
+  SET_VECTOR_ELT(contents, 34, t_I_out);
+  SEXP t_S = PROTECT(allocVector(REALSXP, internal->dim_t_S));
+  memcpy(REAL(t_S), internal->t_S, internal->dim_t_S * sizeof(double));
+  odin_set_dim(t_S, 2, internal->dim_t_S_1, internal->dim_t_S_2);
+  SET_VECTOR_ELT(contents, 35, t_S);
+  SEXP t_S_in = PROTECT(allocVector(REALSXP, internal->dim_t_S_in));
+  memcpy(REAL(t_S_in), internal->t_S_in, internal->dim_t_S_in * sizeof(double));
+  SET_VECTOR_ELT(contents, 36, t_S_in);
+  SEXP t_S_out = PROTECT(allocVector(REALSXP, internal->dim_t_S_out));
+  memcpy(REAL(t_S_out), internal->t_S_out, internal->dim_t_S_out * sizeof(double));
+  SET_VECTOR_ELT(contents, 37, t_S_out);
+  SET_VECTOR_ELT(contents, 38, ScalarReal(internal->w_in));
+  SET_VECTOR_ELT(contents, 39, ScalarReal(internal->w_out));
+  SEXP nms = PROTECT(allocVector(STRSXP, 40));
+  SET_STRING_ELT(nms, 0, mkChar("alpha"));
+  SET_STRING_ELT(nms, 1, mkChar("beta"));
+  SET_STRING_ELT(nms, 2, mkChar("com_p"));
+  SET_STRING_ELT(nms, 3, mkChar("d"));
+  SET_STRING_ELT(nms, 4, mkChar("dim_d"));
+  SET_STRING_ELT(nms, 5, mkChar("dim_d_1"));
+  SET_STRING_ELT(nms, 6, mkChar("dim_d_2"));
+  SET_STRING_ELT(nms, 7, mkChar("dim_I"));
+  SET_STRING_ELT(nms, 8, mkChar("dim_i_initial"));
+  SET_STRING_ELT(nms, 9, mkChar("dim_N"));
+  SET_STRING_ELT(nms, 10, mkChar("dim_new_I"));
+  SET_STRING_ELT(nms, 11, mkChar("dim_S"));
+  SET_STRING_ELT(nms, 12, mkChar("dim_s_initial"));
+  SET_STRING_ELT(nms, 13, mkChar("dim_t_I"));
+  SET_STRING_ELT(nms, 14, mkChar("dim_t_I_1"));
+  SET_STRING_ELT(nms, 15, mkChar("dim_t_I_2"));
+  SET_STRING_ELT(nms, 16, mkChar("dim_t_I_in"));
+  SET_STRING_ELT(nms, 17, mkChar("dim_t_I_out"));
+  SET_STRING_ELT(nms, 18, mkChar("dim_t_S"));
+  SET_STRING_ELT(nms, 19, mkChar("dim_t_S_1"));
+  SET_STRING_ELT(nms, 20, mkChar("dim_t_S_2"));
+  SET_STRING_ELT(nms, 21, mkChar("dim_t_S_in"));
+  SET_STRING_ELT(nms, 22, mkChar("dim_t_S_out"));
+  SET_STRING_ELT(nms, 23, mkChar("i_initial"));
+  SET_STRING_ELT(nms, 24, mkChar("initial_I"));
+  SET_STRING_ELT(nms, 25, mkChar("initial_S"));
+  SET_STRING_ELT(nms, 26, mkChar("N"));
+  SET_STRING_ELT(nms, 27, mkChar("n_subpop"));
+  SET_STRING_ELT(nms, 28, mkChar("new_I"));
+  SET_STRING_ELT(nms, 29, mkChar("offset_output_t_I_in"));
+  SET_STRING_ELT(nms, 30, mkChar("offset_output_t_S_in"));
+  SET_STRING_ELT(nms, 31, mkChar("s_initial"));
+  SET_STRING_ELT(nms, 32, mkChar("t_I"));
+  SET_STRING_ELT(nms, 33, mkChar("t_I_in"));
+  SET_STRING_ELT(nms, 34, mkChar("t_I_out"));
+  SET_STRING_ELT(nms, 35, mkChar("t_S"));
+  SET_STRING_ELT(nms, 36, mkChar("t_S_in"));
+  SET_STRING_ELT(nms, 37, mkChar("t_S_out"));
+  SET_STRING_ELT(nms, 38, mkChar("w_in"));
+  SET_STRING_ELT(nms, 39, mkChar("w_out"));
+  setAttrib(contents, R_NamesSymbol, nms);
+  UNPROTECT(15);
+  return contents;
+}
+SEXP odin_stoch_model_sis_binom_set_user(SEXP internal_p, SEXP user) {
+  odin_stoch_model_sis_binom_internal *internal = odin_stoch_model_sis_binom_get_internal(internal_p, 1);
+  internal->alpha = user_get_scalar_double(user, "alpha", internal->alpha, NA_REAL, NA_REAL);
+  internal->beta = user_get_scalar_double(user, "beta", internal->beta, NA_REAL, NA_REAL);
+  internal->com_p = user_get_scalar_double(user, "com_p", internal->com_p, NA_REAL, NA_REAL);
+  internal->n_subpop = user_get_scalar_int(user, "n_subpop", internal->n_subpop, NA_REAL, NA_REAL);
+  internal->w_in = user_get_scalar_double(user, "w_in", internal->w_in, NA_REAL, NA_REAL);
+  internal->w_out = user_get_scalar_double(user, "w_out", internal->w_out, NA_REAL, NA_REAL);
+  internal->dim_d_1 = internal->n_subpop;
+  internal->dim_d_2 = internal->n_subpop;
+  internal->dim_I = internal->n_subpop;
+  internal->dim_i_initial = internal->n_subpop;
+  internal->dim_N = internal->n_subpop;
+  internal->dim_new_I = internal->n_subpop;
+  internal->dim_S = internal->n_subpop;
+  internal->dim_s_initial = internal->n_subpop;
+  internal->dim_t_I_1 = internal->n_subpop;
+  internal->dim_t_I_2 = internal->n_subpop;
+  internal->dim_t_I_in = internal->n_subpop;
+  internal->dim_t_I_out = internal->n_subpop;
+  internal->dim_t_S_1 = internal->n_subpop;
+  internal->dim_t_S_2 = internal->n_subpop;
+  internal->dim_t_S_in = internal->n_subpop;
+  internal->dim_t_S_out = internal->n_subpop;
+  R_Free(internal->initial_I);
+  internal->initial_I = (double*) R_Calloc(internal->dim_I, double);
+  R_Free(internal->initial_S);
+  internal->initial_S = (double*) R_Calloc(internal->dim_S, double);
+  R_Free(internal->new_I);
+  internal->new_I = (double*) R_Calloc(internal->dim_new_I, double);
+  R_Free(internal->t_I_in);
+  internal->t_I_in = (double*) R_Calloc(internal->dim_t_I_in, double);
+  R_Free(internal->t_I_out);
+  internal->t_I_out = (double*) R_Calloc(internal->dim_t_I_out, double);
+  R_Free(internal->t_S_in);
+  internal->t_S_in = (double*) R_Calloc(internal->dim_t_S_in, double);
+  R_Free(internal->t_S_out);
+  internal->t_S_out = (double*) R_Calloc(internal->dim_t_S_out, double);
+  internal->dim_d = internal->dim_d_1 * internal->dim_d_2;
+  internal->dim_t_I = internal->dim_t_I_1 * internal->dim_t_I_2;
+  internal->dim_t_S = internal->dim_t_S_1 * internal->dim_t_S_2;
+  internal->i_initial = (double*) user_get_array(user, false, internal->i_initial, "i_initial", NA_REAL, NA_REAL, 1, internal->dim_i_initial);
+  internal->N = (double*) user_get_array(user, false, internal->N, "N", NA_REAL, NA_REAL, 1, internal->dim_N);
+  internal->offset_output_t_I_in = internal->dim_t_I_out + internal->dim_t_S_in + internal->dim_t_S_out;
+  internal->offset_output_t_S_in = internal->dim_t_I_out + internal->dim_t_S_out;
+  internal->s_initial = (double*) user_get_array(user, false, internal->s_initial, "s_initial", NA_REAL, NA_REAL, 1, internal->dim_s_initial);
+  R_Free(internal->t_I);
+  internal->t_I = (double*) R_Calloc(internal->dim_t_I, double);
+  R_Free(internal->t_S);
+  internal->t_S = (double*) R_Calloc(internal->dim_t_S, double);
+  internal->d = (double*) user_get_array(user, false, internal->d, "d", NA_REAL, NA_REAL, 2, internal->dim_d_1, internal->dim_d_2);
+  for (int i = 1; i <= internal->dim_I; ++i) {
+    internal->initial_I[i - 1] = internal->i_initial[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_S; ++i) {
+    internal->initial_S[i - 1] = internal->s_initial[i - 1];
+  }
+  return R_NilValue;
+}
+SEXP odin_stoch_model_sis_binom_set_initial(SEXP internal_p, SEXP step_ptr, SEXP state_ptr) {
+  return R_NilValue;
+}
+SEXP odin_stoch_model_sis_binom_metadata(SEXP internal_p) {
+  odin_stoch_model_sis_binom_internal *internal = odin_stoch_model_sis_binom_get_internal(internal_p, 1);
+  SEXP ret = PROTECT(allocVector(VECSXP, 4));
+  SEXP nms = PROTECT(allocVector(STRSXP, 4));
+  SET_STRING_ELT(nms, 0, mkChar("variable_order"));
+  SET_STRING_ELT(nms, 1, mkChar("output_order"));
+  SET_STRING_ELT(nms, 2, mkChar("n_out"));
+  SET_STRING_ELT(nms, 3, mkChar("interpolate_t"));
+  setAttrib(ret, R_NamesSymbol, nms);
+  SEXP variable_length = PROTECT(allocVector(VECSXP, 2));
+  SEXP variable_names = PROTECT(allocVector(STRSXP, 2));
+  setAttrib(variable_length, R_NamesSymbol, variable_names);
+  SET_VECTOR_ELT(variable_length, 0, ScalarInteger(internal->dim_S));
+  SET_VECTOR_ELT(variable_length, 1, ScalarInteger(internal->dim_I));
+  SET_STRING_ELT(variable_names, 0, mkChar("S"));
+  SET_STRING_ELT(variable_names, 1, mkChar("I"));
+  SET_VECTOR_ELT(ret, 0, variable_length);
+  UNPROTECT(2);
+  SEXP output_length = PROTECT(allocVector(VECSXP, 4));
+  SEXP output_names = PROTECT(allocVector(STRSXP, 4));
+  setAttrib(output_length, R_NamesSymbol, output_names);
+  SET_VECTOR_ELT(output_length, 0, ScalarInteger(internal->dim_t_S_out));
+  SET_VECTOR_ELT(output_length, 1, ScalarInteger(internal->dim_t_I_out));
+  SET_VECTOR_ELT(output_length, 2, ScalarInteger(internal->dim_t_S_in));
+  SET_VECTOR_ELT(output_length, 3, ScalarInteger(internal->dim_t_I_in));
+  SET_STRING_ELT(output_names, 0, mkChar("t_S_out"));
+  SET_STRING_ELT(output_names, 1, mkChar("t_I_out"));
+  SET_STRING_ELT(output_names, 2, mkChar("t_S_in"));
+  SET_STRING_ELT(output_names, 3, mkChar("t_I_in"));
+  SET_VECTOR_ELT(ret, 1, output_length);
+  UNPROTECT(2);
+  SET_VECTOR_ELT(ret, 2, ScalarInteger(internal->dim_t_I_in + internal->dim_t_I_out + internal->dim_t_S_in + internal->dim_t_S_out));
+  UNPROTECT(2);
+  return ret;
+}
+SEXP odin_stoch_model_sis_binom_initial_conditions(SEXP internal_p, SEXP step_ptr) {
+  odin_stoch_model_sis_binom_internal *internal = odin_stoch_model_sis_binom_get_internal(internal_p, 1);
+  SEXP r_state = PROTECT(allocVector(REALSXP, internal->dim_I + internal->dim_S));
+  double * state = REAL(r_state);
+  memcpy(state + 0, internal->initial_S, internal->dim_S * sizeof(double));
+  memcpy(state + internal->dim_S, internal->initial_I, internal->dim_I * sizeof(double));
+  UNPROTECT(1);
+  return r_state;
+}
+void odin_stoch_model_sis_binom_rhs(odin_stoch_model_sis_binom_internal* internal, size_t step, double * state, double * state_next, double * output) {
+  double * S = state + 0;
+  double * I = state + internal->dim_S;
+  for (int i = 1; i <= internal->dim_new_I; ++i) {
+    internal->new_I[i - 1] = Rf_rbinom(round(S[i - 1]), 1 - exp(-(internal->beta) * I[i - 1] / (double) internal->N[i - 1]));
+  }
+  for (int i = 1; i <= internal->dim_t_S_1; ++i) {
+    for (int j = 1; j <= internal->dim_t_S_2; ++j) {
+      internal->t_S[i - 1 + internal->dim_t_S_1 * (j - 1)] = Rf_rbinom(round(internal->d[internal->dim_d_1 * (j - 1) + i - 1]), S[i - 1] / (double) internal->N[i - 1]);
+    }
+  }
+  for (int i = 1; i <= internal->dim_t_I_1; ++i) {
+    for (int j = 1; j <= internal->dim_t_I_2; ++j) {
+      internal->t_I[i - 1 + internal->dim_t_I_1 * (j - 1)] = internal->d[internal->dim_d_1 * (j - 1) + i - 1] - internal->t_S[internal->dim_t_S_1 * (j - 1) + i - 1];
+    }
+  }
+  for (int i = 1; i <= internal->dim_t_S_in; ++i) {
+    internal->t_S_in[i - 1] = odin_sum2(internal->t_S, 0, internal->dim_t_S_1, i - 1, i, internal->dim_t_S_1);
+  }
+  for (int i = 1; i <= internal->dim_t_S_out; ++i) {
+    internal->t_S_out[i - 1] = odin_sum2(internal->t_S, i - 1, i, 0, internal->dim_t_S_2, internal->dim_t_S_1);
+  }
+  for (int i = 1; i <= internal->dim_t_I_in; ++i) {
+    internal->t_I_in[i - 1] = odin_sum2(internal->t_I, 0, internal->dim_t_I_1, i - 1, i, internal->dim_t_I_1);
+  }
+  for (int i = 1; i <= internal->dim_t_I_out; ++i) {
+    internal->t_I_out[i - 1] = odin_sum2(internal->t_I, i - 1, i, 0, internal->dim_t_I_2, internal->dim_t_I_1);
+  }
+  for (int i = 1; i <= internal->dim_S; ++i) {
+    state_next[0 + i - 1] = S[i - 1] - internal->new_I[i - 1] - internal->t_S_out[i - 1] + internal->t_S_in[i - 1];
+  }
+  for (int i = 1; i <= internal->dim_I; ++i) {
+    state_next[internal->dim_S + i - 1] = I[i - 1] + internal->new_I[i - 1] - internal->t_I_out[i - 1] + internal->t_I_in[i - 1];
+  }
+  memcpy(output + internal->offset_output_t_S_in, internal->t_S_in, internal->dim_t_S_in * sizeof(double));
+  memcpy(output + 0, internal->t_S_out, internal->dim_t_S_out * sizeof(double));
+  memcpy(output + internal->offset_output_t_I_in, internal->t_I_in, internal->dim_t_I_in * sizeof(double));
+  memcpy(output + internal->dim_t_S_out, internal->t_I_out, internal->dim_t_I_out * sizeof(double));
+}
+void odin_stoch_model_sis_binom_rhs_dde(size_t n_eq, size_t step, double * state, double * state_next, size_t n_out, double * output, void * internal) {
+  odin_stoch_model_sis_binom_rhs((odin_stoch_model_sis_binom_internal*)internal, step, state, state_next, output);
+}
+SEXP odin_stoch_model_sis_binom_rhs_r(SEXP internal_p, SEXP step, SEXP state) {
+  SEXP state_next = PROTECT(allocVector(REALSXP, LENGTH(state)));
+  odin_stoch_model_sis_binom_internal *internal = odin_stoch_model_sis_binom_get_internal(internal_p, 1);
+  SEXP output_ptr = PROTECT(allocVector(REALSXP, internal->dim_t_I_in + internal->dim_t_I_out + internal->dim_t_S_in + internal->dim_t_S_out));
+  setAttrib(state_next, install("output"), output_ptr);
+  UNPROTECT(1);
+  double *output = REAL(output_ptr);
+  GetRNGstate();
+  odin_stoch_model_sis_binom_rhs(internal, scalar_int(step, "step"), REAL(state), REAL(state_next), output);
   PutRNGstate();
   UNPROTECT(1);
   return state_next;

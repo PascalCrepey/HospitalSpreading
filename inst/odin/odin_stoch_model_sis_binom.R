@@ -1,7 +1,4 @@
 # TO MODIFY - FOR THE MOMENT JUST THE COPY-PASTE OF odin_stoch_model_si_binom
-#Total population in each hospital i
-N[] <- S[i] + I[i]
-
 #number of patients moving that are S or I
 t_S[,] <- rbinom(d[i,j], S[i]/N[i])
 t_I[,] <- d[i,j] - t_S[i,j]
@@ -46,6 +43,7 @@ w_out <- user()
 #dimension of compartments
 dim(S) <- n_subpop
 dim(I) <- n_subpop
+dim(N) <- n_subpop
 dim(new_I) <- n_subpop
 dim(s_initial) <- n_subpop
 dim(i_initial) <- n_subpop

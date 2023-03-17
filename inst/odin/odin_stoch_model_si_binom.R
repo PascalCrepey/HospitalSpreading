@@ -53,8 +53,12 @@ dim(t_S_in) <- n_hospitals
 dim(t_I_in) <- n_hospitals
 
 # print variables at each time step
-output(t_S_out[]) <- TRUE
-output(t_I_out[]) <- TRUE
+#output(t_S_out[]) <- TRUE
+#output(t_I_out[]) <- TRUE
 
-output(t_S_in[]) <- TRUE
-output(t_I_in[]) <- TRUE
+#output(t_S_in[]) <- TRUE
+#output(t_I_in[]) <- TRUE
+
+output(new_I[]) <- TRUE
+
+output(t_I[,]) <- TRUE
