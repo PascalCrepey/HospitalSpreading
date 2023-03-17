@@ -1,0 +1,38 @@
+Package: HospitalSpreading
+Title: Infectious disease transmission on Hospital networks
+Version: 0.0.0.9000
+Authors@R: c(
+    person("Hanifa", "Bouziri", , "", "aut"),
+    person("Pascal", "Crépey", email = "crepey@gmail.com", role = c("aut","cre")),
+    person("Maylis", "Layan", , "m.layan@hotmail.fr", "aut"),
+    person("Lulla", "Opatowski", , "", "aut"),
+    person("Francesco", "Parino", , "francesco.parino@me.com", "aut"),
+    person("Eve", "Rahbé", , "eve.rahbe@orange.fr", "aut"),
+    person("Jonathan", "Roux", , "roux.jonathan@outlook.fr", "aut"),
+    person("George", "Shirreff", , "george.shirreff@gmail.com", "aut"),
+    person("Laura", "Temime", , "", "aut"))
+Description: What the package does (one paragraph).
+License: GPL-3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
+Imports: 
+    microbenchmark,
+    odin,
+    SimInf
+Suggests: 
+    knitr,
+    ggplot2,
+    rmarkdown,
+    deSolve,
+    tictoc,
+    tidyverse,
+    data.table,
+    magrittr,
+    dde,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+Depends: 
+    R (>= 2.10)
+LazyData: true

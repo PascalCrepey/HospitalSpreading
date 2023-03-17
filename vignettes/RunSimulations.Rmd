@@ -1,0 +1,199 @@
+---
+title: "Run epidemic simulations along a network using NetworkSpreading"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Run epidemic simulations along a network using NetworkSpreading}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, include = F, eval = T}
+library(HospitalSpreading)
+library(microbenchmark)
+```
+
+## Simulation model 
+
+`NetworkSpreading` simulates the spread of infection along a network of $n$ interconnected subpopulations. Epidemics are stochastic and simulated under a chain binomial process using the `odin` package. 
+
+Within each subpopulation, individuals are either susceptible ($S$) or infected ($I$). Infected individuals transmit with transmission rate $\beta$ and recover with recovery rate $\alpha$. Subpopulations are interconnected by a transfer matrix $\Omega$ that describes the numbers of individuals that migrate between subpopulations. `NetworkSpreading` assumes that for each subpopulation the total number of entries is equal to the total number of outflows. This assumption ensures that all the $N_{i,t}=S_{i,t}+I_{i,t}$ are constant over time, i.e. $N_{i,t} = N_{i}$. When the transfer matrix does not verify this assumption, `NetworkSpreading` assumes that there is an additional population that compensates the unbalanced transfers. We refer to this population as the community. The community is at equilibrium with disease prevalence $p_{com}$. $\omega_{in}$ is the vector of the number of transfers from the community to each subpopulation and $\omega_{out}$ is the vector of the number of transfer from each subpopulation to the community. 
+
+The global simulation model with the community can be discribed as follows: 
+
+$$ S_{i,t+1} = S_{i,t} \left( 1-\frac{\sum_{j \in n\{-i\}}\Omega_{i,j}}{N_{i,t}} \right) + \sum_{j \in n\{-i\}} \Omega_{j,i} \frac{S_{j,t}}{N_{j,t}} - \beta \frac{S_{i,t} I_{i,t}}{N_{i,t}} + \alpha I_{i,t} \tag{1} $$
+
+$$ I_{i,t+1} = I_{i,t} \left( 1- \frac{\sum_{j \in n\{-i\}} \Omega_{i,j}}{N_{i,t}} \right) + \sum_{j \in n\{-i\}} \Omega_{j,i} \frac{I_{j,t}}{N_{j,t}} + \beta \frac{S_{i,t} I_{i,t}}{N_{i,t}}-\alpha I_{i,t} \tag{2} $$
+
+## Parameters
+
+Here we describe and define each of the parameters needed to run the simulation model.
+
+```{r call_parameters}
+time_step = 1                             # time step
+tspan_max = 100                           # final time step
+beta = 0.5                                # transmission rate
+alpha = 0.1                               # recovery rate
+size_subpop = c(112, 144, 131, 119, 120)  # vector of the sizes of the subpopulations
+I_initial_time = c(3, 0, 0, 0, 0)         # no. infected individuals at t=0
+community_prev = 0.1                      # disease prevalence in the community  
+```
+
+The ***size_subpop*** vector contains the size of each subpopulation and the vector ***I_initial_time*** contains the initial number of infected individuals in each subpopulation. In our example, there are 0 infected individual at the start of the epidemic except in subpopulation 1 where 3 individuals are infected.
+
+It is also possible to simply give the total number of infected individuals at time $t=0$ across the network and choose a randomisation procedure to allocate the individuals to the different subpopulations. Several options are available:
+
+- ***uniform***: the infected individuals are uniformly allocated to the subpopulations, 
+- ***largest_pop***: the probability of allocation of the infected individuals is proportional to subpopulation size,
+- ***most_connected_pop***: the probability of allocation of the infected individuals is proportional to the total number of individuals that get in and out of the subpopulation.
+
+```{r example_randomisation, eval=F}
+I_initial_time = 3                    # no. infected individuals at t=0
+initial_state_rando_proc = "uniform"  # randomisation procedure of the infected individuals at t=0
+```
+
+
+```{r hidden_parameters, include = F, eval=T}
+tspan = 1:tspan_max # this is the number of time steps in integers
+#in order to effectively reduce the time step for odin, we must
+beta_odin = beta*time_step  #define a slower beta which operates in a shorter timestep
+tspan_odin = 1:(tspan_max/time_step) #define a longer number of time steps
+# starting_pop = rep(pop_size, npop) #vector of starting population sizes
+# index_pop = c(index_size, rep(0, npop - 1)) #vector of starting infected populations
+```
+
+## Transfer matrix
+
+We define a matrix of transfers between subpopulations. This matrix corresponds to the number of individuals that migration from subpopulation $i$ (in rows) to subpopulation $j$ (in columns)  at each time step $t$. In this analysis, the matrix transfer is randomly chosen.
+
+```{r transfer_matrix, eval=F}
+npop = length(size_subpop)
+trans_mat = make_fake_matrix(nmetapop = npop, scale = 10)
+```
+
+Alternatively, one can use the `HospitalNetwork` package to generate a random network. In this case, `HospitalNetwork` will provide the transfer matrix and the vector of subpopulation sizes.
+
+```{r random_hospitalnetwork, eval=F, message=F}
+library(HospitalNetwork)
+
+# Create a dummy database of transfers between 5 hospitals with a total of 300 subjects  
+dummy_data = create_fake_subjectDB(n_subjects = 300, n_facilities = 5)
+dummy_data_checked = checkBase(dummy_data)
+
+# Build and extract the transfer matrix 
+dummy_network = hospinet_from_subject_database(dummy_data_checked)
+transfer_matrix = dummy_network$matrix
+
+# Number of individuals per hospital, i.e. subpopulation sizes
+size_subpop = dummy_network$subjectsPerHosp$subjects
+```
+
+
+## Model initialisation
+We initialise the SIS model using the predefined parameters.
+
+```{r init_models, echo=TRUE, message=FALSE, eval=F}
+odin_model <- initialize_sis(
+  beta = beta/time_step,
+  alpha = alpha/time_step,
+  size_subpop = size_subpop,
+  transfer_matrix = trans_mat,
+  I_initial_time = I_initial_time,
+  community_prev = community_prev,
+  initial_state_rando_proc = "none"
+  )
+```
+
+## Model execution
+We then run the model using these parameters.
+
+```{r run_model, echo=TRUE, message=FALSE,eval=F}
+odin_result <- odin_model$run(1:(tspan_max/time_step))
+
+```
+
+```{r plot_model, echo = F, message = TRUE,eval=F}
+odin_tib <- odin_result %>% 
+  as_tibble %>%
+  select(step, starts_with("S"), starts_with("I")) %>%
+  rename_all(~gsub("\\[", "_", .x)) %>%
+  rename_all(~gsub("\\]", "", .x)) %>%
+  mutate(times = step*time_step) %>%
+  select(-step) %>% 
+  pivot_longer(-times, names_sep = "_", names_to = c("state", "metapop")) %>%
+  mutate(metapop = as.numeric(metapop))
+
+odin_dt = setDT(odin_tib)[, model := "Odin"]
+
+```
+
+
+## Time performance
+We use the package `microbenchmark` to evaluate the running time of NetworkSpreading over 100 simulations.
+
+```{r runtime_tests, echo = T, eval=F}
+print(benchmark_odin(odin_model, times = tspan_odin, nRun = 100))
+```
+
+## Across multiple simulations
+To compare the model outputs while controlling for the stochasticity, we conduct multiple simulations of each with the same parameters. We compare over a simulation in a single hospital with no migration. 
+
+We also conduct an equivalent deterministic simulation use `deSolve`.
+
+```{r init_multi_models, message = F, eval=F, fig.width = 7}
+Nsims = 100
+trans_mat_null = matrix(0, nrow = npop, ncol = npop)
+
+# Initialise model
+odin_model <- initialize_odin_binomial(beta = beta_odin,
+                            n_subpop = npop,
+                            size_subpop = starting_pop,
+                            I_per_subpop = index_pop,
+                            transfer_matrix = trans_mat_null)
+
+# Run model for 100 simulations
+odin_runs <- odin_model$run(tspan_odin, replicate = Nsims)
+
+# Retrieve dynamics of S and I compartments 
+for(i in 1:Nsims){
+  
+  odin_multi_piece <- odin_runs[,,i] %>%
+    as_tibble %>%
+    select(step, starts_with("S"), starts_with("I")) %>%
+    rename_all(~gsub("\\[", "_", .x)) %>%
+    rename_all(~gsub("\\]", "", .x)) %>%
+    rename(times = step) %>%
+    pivot_longer(-times, names_sep = "_", names_to = c("state", "metapop")) %>%
+    mutate(metapop = as.numeric(metapop), sim = i)
+
+  if(i == 1){
+    odin_multi <- odin_multi_piece
+  } else {
+    odin_multi <- rbind(odin_multi, odin_multi_piece)
+  }
+}
+
+# Plot results
+odin_multi %>%
+  mutate(times = times*time_step) %>%
+  group_by(times, metapop, state) %>%
+  summarise(mean = mean(value)
+            , lo = max(value)
+            , hi = min(value)) %>%
+  filter(times < 30, metapop == 1) %>%
+  
+  ggplot(data = ., aes(x = times)) +
+  geom_line(aes(y = mean, linetype = "mean")) +
+  geom_line(data = . , aes(y = lo, linetype = "range")) +
+  geom_line(data = . , aes(y = hi, linetype = "range")) +
+  facet_grid(metapop~state)
+
+```
+
+
