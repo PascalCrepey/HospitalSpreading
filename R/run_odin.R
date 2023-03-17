@@ -12,24 +12,24 @@
 #' 4. the transfer matrix
 #' 5. the vector of subpopulation sizes
 #' @export
-run_simulation = function(initialized_model, t_max, time_step, replicate) {
+run_simulation = function(initialized_model, t_max, time_step, replicate = 1) {
 
   # Run simulations
-  simulations <- initialized_model$run(1:(t_max/time_step), replicate = Nsims)
+  simulations <- initialized_model$run(1:(t_max/time_step), replicate = replicate)
 
   # Get array of prevalence
   #   - Dimension 1: Supopulations
   #   - Dimension 2: Timesteps
   #   - Dimension 3: Simulation number
   prevalence = simulations[,grepl("^I\\[[0-9]+\\]$", colnames(simulations)),]
-  dimnames(prevalence)[[1]] = paste0("t_", simulations[,1,1])
+  unname(prevalence)
 
   # Get array of incidence
   #   - Dimension 1: Supopulations
   #   - Dimension 2: Timesteps
   #   - Dimension 3: Simulation number
   incidence = simulations[,grepl("new_I\\[[0-9]+\\]$", colnames(simulations)),]
-  dimnames(incidence)[[1]] = paste0("t_", simulations[,1,1])
+  unname(incidence)
 
   # Get list of arrays of transfers
   transfers_I = lapply(asplit(simulations,3), function(x)

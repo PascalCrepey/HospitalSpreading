@@ -8,14 +8,14 @@ library(HospitalSpreading)
 
 # Parameters
 time_step = 1                                             # time step (for odin)
-t_max = 5                                                 # final time step
+t_max = 20                                                # final time step
 beta = 0.5                                                # transmission rate
-npop = 3                                                  # number of hospitals
-pop_size = 1000                                           # starting population size of each hospital
+npop = 5                                                  # number of hospitals
+pop_size = 150                                            # starting population size of each hospital
 starting_pop = rep(pop_size, npop)                        # vector of starting population sizes
 index_size = 10                                           # number of infected individuals in hospital 1
 index_pop = c(index_size, rep(0, npop - 1))               # vector of starting infected populations
-trans_mat = make_fake_matrix(nmetapop = npop, scale = 20)  # Transfer matrix
+trans_mat = make_fake_matrix(nmetapop = npop, scale = 20) # Transfer matrix
 
 # Initialize model
 initialized_model <- initialize_odin_binomial(
