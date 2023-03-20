@@ -21,17 +21,48 @@ library(microbenchmark)
 
 ## Simulation model 
 
-`NetworkSpreading` simulates the spread of infection along a network of $n$ interconnected subpopulations. Epidemics are stochastic and simulated under a chain binomial process using the `odin` package. 
+`NetworkSpreading` simulates the spread of infection along a network of $n$ interconnected subpopulations $D$. Epidemics are stochastic and simulated under a chain binomial process using the `odin` package. 
 
-First, we simulate 
+Within each subpopulation, individuals are either susceptible ($S$) or infected ($I$). Infected individuals transmit with transmission rate $\beta$ and recover with recovery rate $\alpha$. Subpopulations are interconnected by a transfer matrix $\Omega$ that describes the numbers of individuals that migrate between subpopulations. `NetworkSpreading` assumes that for each subpopulation the total number of entries is equal to the total number of outflows. This assumption ensures that all the $N_{k,t}=S_{k,t}+I_{k,t}$ are constant over time, i.e. $N_{k,t} = N_{k}$. When the transfer matrix does not verify this assumption, `NetworkSpreading` assumes that there is an additional population that compensates the unbalanced transfers. We refer to this population as the community. The community is at equilibrium with disease prevalence $p_{com}$. $\omega_{in}$ is the vector of the number of transfers from the community to each subpopulation and $\omega_{out}$ is the vector of the number of transfer from each subpopulation to the community.
 
-Within each subpopulation, individuals are either susceptible ($S$) or infected ($I$). Infected individuals transmit with transmission rate $\beta$ and recover with recovery rate $\alpha$. Subpopulations are interconnected by a transfer matrix $\Omega$ that describes the numbers of individuals that migrate between subpopulations. `NetworkSpreading` assumes that for each subpopulation the total number of entries is equal to the total number of outflows. This assumption ensures that all the $N_{i,t}=S_{i,t}+I_{i,t}$ are constant over time, i.e. $N_{i,t} = N_{i}$. When the transfer matrix does not verify this assumption, `NetworkSpreading` assumes that there is an additional population that compensates the unbalanced transfers. We refer to this population as the community. The community is at equilibrium with disease prevalence $p_{com}$. $\omega_{in}$ is the vector of the number of transfers from the community to each subpopulation and $\omega_{out}$ is the vector of the number of transfer from each subpopulation to the community. 
+At each time step, the epidemic simulation process is divided into two steps:
+1. Updating the infection status of transferred individuals 
+2. Updating the number of susceptible and infectious individuals
 
-The global simulation model with the community can be discribed as follows: 
+First, the infection status of transferred individuals is updated by drawing the total number of susceptible individuals that leave their subpopulation.
 
-$$ S_{i,t+1} = S_{i,t} \left( 1-\frac{\sum_{j \in n\{-i\}}\Omega_{i,j}}{N_{i,t}} \right) + \sum_{j \in n\{-i\}} \Omega_{j,i} \frac{S_{j,t}}{N_{j,t}} - \beta \frac{S_{i,t} I_{i,t}}{N_{i,t}} + \alpha I_{i,t} \tag{1} $$
+$$
+n_{S_k \rightarrow S_{\{-k\}}} \sim min \left( S_{k,t}, B ( \Omega_{k,.}, S_{k,t} / N_{k,t} ) \right)
+$$
 
-$$ I_{i,t+1} = I_{i,t} \left( 1- \frac{\sum_{j \in n\{-i\}} \Omega_{i,j}}{N_{i,t}} \right) + \sum_{j \in n\{-i\}} \Omega_{j,i} \frac{I_{j,t}}{N_{j,t}} + \beta \frac{S_{i,t} I_{i,t}}{N_{i,t}}-\alpha I_{i,t} \tag{2} $$
+Then, the destination of the susceptible individuals that migrate between subpopulations is drawn in the following multinomial distribution:
+
+$$
+n_{S_k \rightarrow Com, S_1 ,.., S_n} \sim M( n_{S_k \rightarrow S_{\{-k\}} }, p_1, ..., p_{n+1})
+$$
+
+
+with \begin{equation}
+    p_j =
+    \begin{cases}
+      p_{com}, \text{if}\ j=1\\
+      0, & \text{if}\ j=k+1 \\
+      \Omega_{k,j-1} / \Omega_{k,.}, & \text{otherwise}
+    \end{cases}
+\end{equation}
+
+Secondly, $n_{S_k \rightarrow I_k}$ the number of new infected individuals and $n_{I_k \rightarrow S_k}$ the number of recovered individuals is drawn for each subpopulation i from a binomial distribution:
+
+$$
+n_{S_k \rightarrow I_k} \sim B (S_{k,t}, 1-exp(-\beta I_{k,t} / N_{k,t}) ) \\
+n_{I_k \rightarrow S_k} \sim B (I_{k,t}, 1-exp(-\alpha) )
+$$
+
+Finally, the number of susceptible and infected individuals at time $t+1$ is:
+$$
+S_{k,t+1} = S_{k,t} - n_{S_k \rightarrow I_k} + n_{I_k \rightarrow S_k} - n_{S_k \rightarrow S_{\{-k\}}} + n_{S_{\{-k\}} \rightarrow S_k}\\
+I_{k,t+1} = I_{k,t} - n_{I_k \rightarrow S_k} + n_{S_k \rightarrow I_k} - n_{I_k \rightarrow I_{\{-k\}}} + n_{I_{\{-k\}} \rightarrow I_k}
+$$
 
 ## Parameters
 

@@ -37,7 +37,7 @@ N[] <- S[i] + I[i]
 # t_S[,] <- rmultinom(1, S[i], d[i]/N[i])[,1]
 # t_I[,] <- rmultinom(1, I[i], d[i]/N[i])[,1]
 
-t_S_out[] <- min(S[i], rbinom(sum(d[i,]), S[i]/N[i]))
+t_S_out[] <- min(rbinom(sum(d[i,]), S[i]/N[i]))
 #t_S[i,] <- rmultinom(t_S_out[i], d[i,])
 t_S[,] <- min(S[i], round(d[i,j]*S[i]/N[i]))
 t_I[,] <- d[i,j]-t_S[i,j]
