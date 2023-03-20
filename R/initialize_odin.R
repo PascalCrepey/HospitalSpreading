@@ -93,7 +93,7 @@ initialize_odin_binomial <- function(beta,
   #                             n_hospitals = n_subpop,
   #                             d = transfer_matrix)
 
-  model = odin_stoch_model_si_binom$new(beta = beta,
+  model = odin_stoch_model_si_binom_fixing$new(beta = beta,
                                         s_initial = size_subpop - I_per_subpop,
                                         i_initial = I_per_subpop,
                                         n_hospitals = n_subpop,
@@ -253,8 +253,7 @@ initialize_sis <- function(beta,
     N = size_subpop,
     d = transfer_matrix,
     com_p = community_prev,
-    w_in = w_in,
-    w_out = w_out
+    n_com_subpop = length(size_subpop)+1
     )
   return(model)
 

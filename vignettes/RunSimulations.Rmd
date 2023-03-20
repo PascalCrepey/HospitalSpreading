@@ -23,6 +23,8 @@ library(microbenchmark)
 
 `NetworkSpreading` simulates the spread of infection along a network of $n$ interconnected subpopulations. Epidemics are stochastic and simulated under a chain binomial process using the `odin` package. 
 
+First, we simulate 
+
 Within each subpopulation, individuals are either susceptible ($S$) or infected ($I$). Infected individuals transmit with transmission rate $\beta$ and recover with recovery rate $\alpha$. Subpopulations are interconnected by a transfer matrix $\Omega$ that describes the numbers of individuals that migrate between subpopulations. `NetworkSpreading` assumes that for each subpopulation the total number of entries is equal to the total number of outflows. This assumption ensures that all the $N_{i,t}=S_{i,t}+I_{i,t}$ are constant over time, i.e. $N_{i,t} = N_{i}$. When the transfer matrix does not verify this assumption, `NetworkSpreading` assumes that there is an additional population that compensates the unbalanced transfers. We refer to this population as the community. The community is at equilibrium with disease prevalence $p_{com}$. $\omega_{in}$ is the vector of the number of transfers from the community to each subpopulation and $\omega_{out}$ is the vector of the number of transfer from each subpopulation to the community. 
 
 The global simulation model with the community can be discribed as follows: 
