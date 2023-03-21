@@ -367,8 +367,8 @@ odin_stoch_model_sis_binom_ <- R6::R6Class(
     cfuns = list(
       rhs_dde = "odin_stoch_model_sis_binom_rhs_dde"),
     dll = "HospitalSpreading",
-    user = c("alpha", "beta", "com_p", "d", "i_initial", "N", "n_com_subpop",
-             "n_subpop", "s_initial"),
+    user = c("alpha", "beta", "com_p", "d", "i_initial", "N", "n_subpop",
+             "s_initial"),
 
     ## This is never called, but is used to ensure that R finds our
     ## symbols that we will use from the package; without this they

@@ -6,13 +6,16 @@ rm(list = ls())
 odin::odin_package(".")
 pkgload::load_all()
 
+######################################
+# SI MODEL
+######################################
 # Input parameters
 # df_transfer = matrix(c(0, 5, 2,
 #                        3, 0, 3,
 #                        4, 1, 0),
 #                      ncol = 3, byrow = T)
-n_hospitals = 20
-df_transfer = make_fake_matrix(n_hospitals, 20)
+n_hospitals = 5
+df_transfer = make_fake_matrix(n_hospitals, 5)
 
 s_initial = rep(100, n_hospitals)
 i_initial = c(1, rep(0, n_hospitals-1))
@@ -25,9 +28,46 @@ model <- initialize_odin_binomial(beta = 0.16,
                                   I_per_subpop = i_initial)
 date_lim = 100
 res <- model$run(0:date_lim, replicate = 1)
+head(res[,,1],5)
+
 summary(apply(res[,grepl("^I", dimnames(res)[[2]]),1], 2, min))
 summary(apply(res[,grepl("^S", dimnames(res)[[2]]),1], 2, min))
 summary(apply(res[,grepl("^t_I", dimnames(res)[[2]]),1], 2, min))
-matplot(res[,grepl("^I", dimnames(res)[[2]]),1], type = "l", ylab = "I")
-matplot(res[,grepl("^S", dimnames(res)[[2]]),1], type = "l", ylab = "S")
-matplot(res[,grepl("^t_I", dimnames(res)[[2]]),1], type = "l", ylab = "Transferred I")
+
+par(mfrow = c(2,2))
+matplot(res[,grepl("^I", dimnames(res)[[2]]),1], type = "l", ylab = "Infected individuals")
+matplot(res[,grepl("^S", dimnames(res)[[2]]),1], type = "l", ylab = "Susceptible individuals")
+matplot(res[,grepl("^t_I", dimnames(res)[[2]]),1], type = "l", ylab = "Transferred infected individuals")
+
+
+######################################
+# SIS MODEL
+######################################
+n_hospitals = 3
+df_transfer = matrix(c(0,1,2,
+                       4,0,2,
+                       3,8,0), byrow = T, ncol = 3)
+
+size_subpop = rep(150, n_hospitals)
+i_initial = c(10, rep(0, n_hospitals-1))
+
+#run the model
+model <- initialize_sis(beta = 0.16,
+                        alpha = 0.1,
+                        size_subpop = size_subpop,
+                        transfer_matrix = df_transfer,
+                        I_initial_time = i_initial,
+                        community_prev = 0.25
+                        )
+
+date_lim = 100
+res <- model$run(1:date_lim, replicate = 1)
+
+summary(apply(res[,grepl("^I", dimnames(res)[[2]]),1], 2, min))
+summary(apply(res[,grepl("^S", dimnames(res)[[2]]),1], 2, min))
+summary(apply(res[,grepl("^t_I", dimnames(res)[[2]]),1], 2, min))
+
+par(mfrow = c(2,2))
+matplot(res[,grepl("^I", dimnames(res)[[2]]),1], type = "l", ylab = "Infected individuals")
+matplot(res[,grepl("^S", dimnames(res)[[2]]),1], type = "l", ylab = "Susceptible individuals")
+matplot(res[,grepl("^t_I", dimnames(res)[[2]]),1], type = "l", ylab = "Transferred infected individuals")

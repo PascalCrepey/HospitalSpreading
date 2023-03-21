@@ -232,16 +232,20 @@ initialize_sis <- function(beta,
 )
 {
 
-  # Transfers from and within the community
-  total_entries = rowSums(transfer_matrix)
-  total_outflows = colSums(transfer_matrix)
-  w_in = total_outflows-total_entries
-  w_in[w_in < 0] = 0
-  w_out = total_entries-total_outflows
-  w_out[w_out < 0] = 0
-
   # Get initial conditions
   initial_state = initial_state_randomisation(size_subpop, I_initial_time, initial_state_rando_proc, transfer_matrix)
+
+  # Transfers from and within the community
+  total_inflow = colSums(transfer_matrix)
+  total_outflow = rowSums(transfer_matrix)
+  com_entrance = total_inflow-total_outflow
+  com_entrance[com_entrance < 0] = 0
+  com_exit = total_outflow - total_inflow
+  com_exit[com_exit < 0] = 0
+
+  transfer_matrix_full = rbind(transfer_matrix, com_exit)
+  transfer_matrix_full = cbind(transfer_matrix_full, c(com_entrance, 0))
+  rownames(transfer_matrix_full) = NULL
 
   # Create odin model
   model = odin_stoch_model_sis_binom$new(
@@ -251,9 +255,8 @@ initialize_sis <- function(beta,
     i_initial = initial_state$I_per_subpop,
     n_subpop = length(size_subpop),
     N = size_subpop,
-    d = transfer_matrix,
-    com_p = community_prev,
-    n_com_subpop = length(size_subpop)+1
+    d = transfer_matrix_full,
+    com_p = community_prev
     )
   return(model)
 
