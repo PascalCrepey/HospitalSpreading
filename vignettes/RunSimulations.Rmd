@@ -121,7 +121,7 @@ size_subpop = dummy_network$subjectsPerHosp$subjects
 ## Model initialisation
 We initialise the SIS model using the predefined parameters.
 
-```{r init_models, echo=TRUE, message=FALSE, eval=F}
+```{r init_models, echo=TRUE, message=FALSE, eval=T}
 odin_model <- initialize_sis(
   beta = beta/time_step,
   alpha = alpha/time_step,
@@ -136,8 +136,8 @@ odin_model <- initialize_sis(
 ## Model execution
 We then run the model using these parameters.
 
-```{r run_model, echo=TRUE, message=FALSE,eval=F}
-odin_result <- run_simulation(odin_model, t_max, time_step)
+```{r run_model, echo=TRUE, eval=T}
+odin_result <- run_simulation(odin_model, tspan_max, time_step)
 ```
 
 By default, the function `run_simulation` simulates one epidemic. More epidemics can be simulated at the same time by specifying the number of replicates as follows:  
@@ -146,19 +146,6 @@ odin_result <- run_simulation(odin_model, t_max, time_step, 20)
 ```
 
 ## Model output
-```{r old_model, echo = F, eval = T}
-initialized_model <- initialize_odin_binomial(
-  beta = beta/time_step,
-  n_subpop = length(size_subpop),
-  size_subpop = sum(size_subpop),
-  I_per_subpop = I_initial_time,
-  transfer_matrix = trans_mat
-  )
-
-set.seed(20230317)
-odin_result = run_simulation(initialized_model, tspan_max, time_step)
-```
-
 The output of the simulation model is a list of 5 elements:
 
 - `prevalence`: an array of the total number of infected individuals at time t (row) in every subpopulation (column). Here, we simulated only one epidemic, hence the output is a matrix. In the case of multiple simulated epidemics, the array has 3 dimensions, the third dimension corresponding to the simulations. 
@@ -191,7 +178,8 @@ odin_result$subpop_size
 ## Time performance
 We use the package `microbenchmark` to evaluate the running time of NetworkSpreading over 100 simulations.
 
-```{r runtime_tests, echo = T, eval=F}
+```{r runtime_tests, echo = T, eval=T}
+
 print(benchmark_odin(odin_model, times = tspan_odin, nRun = 100))
 ```
 
