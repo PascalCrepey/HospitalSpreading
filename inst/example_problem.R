@@ -20,7 +20,7 @@ df_transfer = make_fake_matrix(n_hospitals, 5)
 s_initial = rep(100, n_hospitals)
 i_initial = c(1, rep(0, n_hospitals-1))
 
-#run the model
+# Run the model
 model <- initialize_odin_binomial(beta = 0.16,
                                   n_subpop = n_hospitals,
                                   size_subpop = s_initial + i_initial,
@@ -39,6 +39,11 @@ matplot(res[,grepl("^I", dimnames(res)[[2]]),1], type = "l", ylab = "Infected in
 matplot(res[,grepl("^S", dimnames(res)[[2]]),1], type = "l", ylab = "Susceptible individuals")
 matplot(res[,grepl("^t_I", dimnames(res)[[2]]),1], type = "l", ylab = "Transferred infected individuals")
 
+# Compare number of transitions to input transfer matrix
+res_trans = res[,grepl("t_tot", dimnames(res)[[2]]),1]
+res_trans = asplit(res_trans, MARGIN = 1)
+res_trans = lapply(res_trans, function(x) matrix(x, ncol = n_hospitals, nrow = n_hospitals, byrow = F))
+sum(!sapply(res_trans, function(x) identical(x, df_transfer)))
 
 ######################################
 # SIS MODEL
@@ -51,7 +56,7 @@ df_transfer = matrix(c(0,1,2,
 size_subpop = rep(150, n_hospitals)
 i_initial = c(10, rep(0, n_hospitals-1))
 
-#run the model
+# Run the model
 model <- initialize_sis(beta = 0.16,
                         alpha = 0.1,
                         size_subpop = size_subpop,
@@ -71,3 +76,9 @@ par(mfrow = c(2,2))
 matplot(res[,grepl("^I", dimnames(res)[[2]]),1], type = "l", ylab = "Infected individuals")
 matplot(res[,grepl("^S", dimnames(res)[[2]]),1], type = "l", ylab = "Susceptible individuals")
 matplot(res[,grepl("^t_I", dimnames(res)[[2]]),1], type = "l", ylab = "Transferred infected individuals")
+
+# Compare number of transitions to input transfer matrix
+res_trans = res[,grepl("t_tot", dimnames(res)[[2]]),1]
+res_trans = asplit(res_trans, MARGIN = 1)
+res_trans = lapply(res_trans, function(x) matrix(x, ncol = n_hospitals+1, nrow = n_hospitals+1, byrow = F)[1:n_hospitals, 1:n_hospitals])
+sum(!sapply(res_trans, function(x) identical(x, df_transfer)))

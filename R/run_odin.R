@@ -22,14 +22,16 @@ run_simulation = function(initialized_model, t_max, time_step, replicate = 1) {
   #   - Dimension 2: Timesteps
   #   - Dimension 3: Simulation number
   prevalence = simulations[,grepl("^I\\[[0-9]+\\]$", colnames(simulations)),]
-  unname(prevalence)
+  dimnames(prevalence)[[2]] = gsub("I\\[", "prev_", dimnames(prevalence)[[2]])
+  dimnames(prevalence)[[2]] = gsub("]", "", dimnames(prevalence)[[2]])
 
   # Get array of incidence
   #   - Dimension 1: Supopulations
   #   - Dimension 2: Timesteps
   #   - Dimension 3: Simulation number
   incidence = simulations[,grepl("new_I\\[[0-9]+\\]$", colnames(simulations)),]
-  unname(incidence)
+  dimnames(incidence)[[2]] = gsub("new_I\\[", "inc_", dimnames(incidence)[[2]])
+  dimnames(incidence)[[2]] = gsub("]", "", dimnames(incidence)[[2]])
 
   # Get list of arrays of transfers
   transfers_I = lapply(asplit(simulations,3), function(x)
