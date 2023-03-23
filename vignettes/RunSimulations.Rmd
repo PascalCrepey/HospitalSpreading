@@ -17,51 +17,50 @@ knitr::opts_chunk$set(
 ```{r setup, include = F, eval = T}
 library(HospitalSpreading)
 library(microbenchmark)
+library(tidyverse)
 ```
 
 ## Simulation model 
 
 `NetworkSpreading` simulates the spread of infection along a network of $n$ interconnected subpopulations $D$. Epidemics are stochastic and simulated under a chain binomial process using the `odin` package. 
 
-Within each subpopulation, individuals are either susceptible ($S$) or infected ($I$). Infected individuals transmit with transmission rate $\beta$ and recover with recovery rate $\alpha$. Subpopulations are interconnected by a transfer matrix $\Omega$ that describes the numbers of individuals that migrate between subpopulations. `NetworkSpreading` assumes that for each subpopulation the total number of entries is equal to the total number of outflows. This assumption ensures that all the $N_{k,t}=S_{k,t}+I_{k,t}$ are constant over time, i.e. $N_{k,t} = N_{k}$. When the transfer matrix does not verify this assumption, `NetworkSpreading` assumes that there is an additional population that compensates the unbalanced transfers. We refer to this population as the community. The community is at equilibrium with disease prevalence $p_{com}$. $\omega_{in}$ is the vector of the number of transfers from the community to each subpopulation and $\omega_{out}$ is the vector of the number of transfer from each subpopulation to the community.
+Within each subpopulation, individuals are either susceptible ($S$) or infected ($I$). Infected individuals transmit with transmission rate $\beta$ and recover with recovery rate $\alpha$. Subpopulations are interconnected by a transfer matrix $\Omega$ that describes the numbers of individuals that migrate between subpopulations. `NetworkSpreading` assumes that for each subpopulation the total number of entries is equal to the total number of outflows. This assumption ensures that all the $N_{k,t}=S_{k,t}+I_{k,t}$ are constant over time, consequently $N_{k,t} = N_{k}$. When the transfer matrix does not verify this assumption, `NetworkSpreading` assumes that there is an additional population that compensates the unbalanced transfers. We refer to this population as the community. The community is at equilibrium with disease prevalence $p_{com}$. $\omega_{in}$ is the vector of the number of transfers from the community to each subpopulation and $\omega_{out}$ is the vector of the number of transfer from each subpopulation to the community.
 
 At each time step, the epidemic simulation process is divided into two steps:
 1. Updating the infection status of transferred individuals 
-2. Updating the number of susceptible and infectious individuals
+2. Updating the number of susceptible and infectious individuals per subpopulation
 
-First, the infection status of transferred individuals is updated by drawing the total number of susceptible individuals that leave their subpopulation.
-
-$$
-n_{S_k \rightarrow S_{\{-k\}}} \sim min \left( S_{k,t}, B ( \Omega_{k,.}, S_{k,t} / N_{k,t} ) \right)
-$$
-
-Then, the destination of the susceptible individuals that migrate between subpopulations is drawn in the following multinomial distribution:
+First, `NetworkSpreading` assumes that all individuals have the same probability of being transferred, regardless of their infection status. Transfers occur at the start of each time step and is instantaneous. The number of transferred susceptible individuals from subpopulation $k$ to subpopulation $j$ at time $t+1$ is:
 
 $$
-n_{S_k \rightarrow Com, S_1 ,.., S_n} \sim M( n_{S_k \rightarrow S_{\{-k\}} }, p_1, ..., p_{n+1})
+n_{S_k \rightarrow S_{j},t+1} = min \left( S_{k,t}, \Omega_{i,j} \frac{S_{k,t}}{N_{k}} \right)
 $$
 
-
-with \begin{equation}
-    p_j =
-    \begin{cases}
-      p_{com}, \text{if}\ j=1\\
-      0, & \text{if}\ j=k+1 \\
-      \Omega_{k,j-1} / \Omega_{k,.}, & \text{otherwise}
-    \end{cases}
-\end{equation}
-
-Secondly, $n_{S_k \rightarrow I_k}$ the number of new infected individuals and $n_{I_k \rightarrow S_k}$ the number of recovered individuals is drawn for each subpopulation i from a binomial distribution:
-
+Since there are only two compartments per subpopulation, the number of transferred infected individuals from subpopulation $k$ to subpopulation $j$ at time $t+1$ is directly given by:
 $$
-n_{S_k \rightarrow I_k} \sim B (S_{k,t}, 1-exp(-\beta I_{k,t} / N_{k,t}) ) \\
-n_{I_k \rightarrow S_k} \sim B (I_{k,t}, 1-exp(-\alpha) )
+n_{I_k \rightarrow I_{j},t+1} = \Omega_{i,j} - n_{S_k \rightarrow S_{j},t+1}
 $$
 
-Finally, the number of susceptible and infected individuals at time $t+1$ is:
+The new number of susceptible and infected individuals at the beginning of time step $t+1$ is:
 $$
-S_{k,t+1} = S_{k,t} - n_{S_k \rightarrow I_k} + n_{I_k \rightarrow S_k} - n_{S_k \rightarrow S_{\{-k\}}} + n_{S_{\{-k\}} \rightarrow S_k}\\
-I_{k,t+1} = I_{k,t} - n_{I_k \rightarrow S_k} + n_{S_k \rightarrow I_k} - n_{I_k \rightarrow I_{\{-k\}}} + n_{I_{\{-k\}} \rightarrow I_k}
+S_{k,t+1\:start} = S_{k,t} + \sum_j n_{S_j \rightarrow S_{j},t+1} - n_{S_k \rightarrow S_{j},t+1} \\
+I_{k,t+1\:start} = I_{k,t} + \sum_j n_{I_j \rightarrow I_{j},t+1} - n_{I_k \rightarrow I_{j},t+1}
+$$
+
+Then, the transmission process is simulated at time $t+1$ using the updated prevalence following individual transfers. The number of newly infected individuals per subpopulation is drawn from a binomial distribution as follows:
+
+$$
+n_{S_k \rightarrow I_k, t+1} \sim B \left( S_{k,t+1\:start} , 1-exp(-\beta \:S_{k,t+1\:start} / N_k ) \right)
+$$
+The number of new recovered individuals at time $t+1$ is drawn from the following binomial distribution:
+$$
+n_{I_k \rightarrow S_k, t+1} \sim B \left( I_{k,t+1\:start} , 1-exp(-\alpha) \right)
+$$
+Finally, the number of susceptible and infected individuals is updated:
+
+$$
+S_{k,t+1} = S_{k,t+1 \: start} + n_{I_k \rightarrow S_k, t+1} - n_{S_k \rightarrow I_k, t+1} \\
+I_{k,t+1} = I_{k,t+1 \: start} + n_{S_k \rightarrow I_k, t+1} - n_{I_k \rightarrow S_k, t+1}
 $$
 
 ## Parameters
@@ -123,8 +122,8 @@ We initialise the SIS model using the predefined parameters.
 
 ```{r init_models, echo=TRUE, message=FALSE, eval=T}
 odin_model <- initialize_sis(
-  beta = beta/time_step,
-  alpha = alpha/time_step,
+  beta = beta,
+  alpha = alpha,
   size_subpop = size_subpop,
   transfer_matrix = trans_mat,
   I_initial_time = I_initial_time,
@@ -142,7 +141,7 @@ odin_result <- run_simulation(odin_model, tspan_max, time_step)
 
 By default, the function `run_simulation` simulates one epidemic. More epidemics can be simulated at the same time by specifying the number of replicates as follows:  
 ```{r run_model_multiple, eval=F,echo=TRUE, message=FALSE} 
-odin_result <- run_simulation(odin_model, t_max, time_step, 20)
+odin_result <- run_simulation(odin_model, tspan_max, time_step, 20)
 ```
 
 ## Model output
@@ -179,8 +178,7 @@ odin_result$subpop_size
 We use the package `microbenchmark` to evaluate the running time of NetworkSpreading over 100 simulations.
 
 ```{r runtime_tests, echo = T, eval=T}
-
-print(benchmark_odin(odin_model, times = tspan_odin, nRun = 100))
+print(benchmark_odin(odin_model, times = 0:(tspan_max*time_step), nRun = 100))
 ```
 
 ## Across multiple simulations
@@ -188,26 +186,30 @@ To compare the model outputs while controlling for the stochasticity, we conduct
 
 We also conduct an equivalent deterministic simulation use `deSolve`.
 
-```{r init_multi_models, message = F, eval=F, fig.width = 7}
+```{r init_multi_models, message = F, eval=T, fig.width = 7}
 Nsims = 100
 trans_mat_null = matrix(0, nrow = npop, ncol = npop)
 
 # Initialise model
-odin_model <- initialize_odin_binomial(beta = beta_odin,
-                            n_subpop = npop,
-                            size_subpop = starting_pop,
-                            I_per_subpop = index_pop,
-                            transfer_matrix = trans_mat_null)
+odin_model <- initialize_sis(
+  beta = beta/time_step,
+  alpha = alpha/time_step,
+  size_subpop = size_subpop,
+  transfer_matrix = trans_mat,
+  I_initial_time = I_initial_time,
+  community_prev = community_prev,
+  initial_state_rando_proc = "none"
+  )
 
 # Run model for 100 simulations
-odin_runs <- odin_model$run(tspan_odin, replicate = Nsims)
+odin_runs <- odin_model$run(0:(tspan_max*time_step), replicate = Nsims)
 
 # Retrieve dynamics of S and I compartments 
 for(i in 1:Nsims){
   
   odin_multi_piece <- odin_runs[,,i] %>%
     as_tibble %>%
-    select(step, starts_with("S"), starts_with("I")) %>%
+    select(step, starts_with("S["), starts_with("I[")) %>%
     rename_all(~gsub("\\[", "_", .x)) %>%
     rename_all(~gsub("\\]", "", .x)) %>%
     rename(times = step) %>%
@@ -223,19 +225,25 @@ for(i in 1:Nsims){
 
 # Plot results
 odin_multi %>%
-  mutate(times = times*time_step) %>%
+  mutate(times = times/time_step) %>%
   group_by(times, metapop, state) %>%
   summarise(mean = mean(value)
             , lo = max(value)
             , hi = min(value)) %>%
   filter(times < 30, metapop == 1) %>%
-  
-  ggplot(data = ., aes(x = times)) +
-  geom_line(aes(y = mean, linetype = "mean")) +
-  geom_line(data = . , aes(y = lo, linetype = "range")) +
-  geom_line(data = . , aes(y = hi, linetype = "range")) +
+  ggplot(.) +
+  geom_line(aes(x = times, y = mean, linetype = "mean")) +
+  geom_line(aes(x = times, y = lo, linetype = "range")) +
+  geom_line(aes(x = times, y = hi, linetype = "range")) +
   facet_grid(metapop~state)
 
 ```
 
+## Unit tests
+
+Ideas of unit tests that could be implemented:
+
+- Subpopulation sizes $N_i$ are constant over time
+- The total number of transfers $\Omega$ is equal to the input transfer matrix and constant over time
+- Compartments $S_i$ and $I_i$ are always positive or null 
 
