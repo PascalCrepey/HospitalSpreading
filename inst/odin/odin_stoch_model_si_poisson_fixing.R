@@ -7,7 +7,6 @@ n_hospitals <- user()
 s_initial[] <- user()
 i_initial[] <- user()
 d[,] <- user()
-time_step <- user(integer=TRUE)
 
 # Dimension of variables
 dim(S) <- n_hospitals
@@ -23,10 +22,10 @@ dim(s_initial) <- n_hospitals
 dim(i_initial) <- n_hospitals
 
 dim(d) <- c(n_hospitals, n_hospitals)
+# dim(d_prob_out) <- c(n_hospitals, n_hospitals)
 dim(t_S) <- c(n_hospitals, n_hospitals)
 dim(t_I) <- c(n_hospitals, n_hospitals)
-# dim(d_prob_out) <- c(n_hospitals, n_hospitals)
-# dim(t_tot) <- c(n_hospitals, n_hospitals)
+dim(t_tot) <- c(n_hospitals, n_hospitals)
 # dim(t_S_out) <- n_hospitals
 
 ##############################
@@ -42,20 +41,20 @@ N[] <- S[i] + I[i]
 #t_S_out[] <- min(S[i], round(sum(d[i,])*S[i]/N[i]))
 #t_S[,1] <- rbinom(t_S_out[i], d_prob_out[i,1])
 #t_S[,2:(n_hospitals-1)] <- if (i == n_hospitals) t_S_out[i] - sum(t_S[i,1:(n_hospitals-1)]) else rbinom(t_S_out[i] - sum(t_S[i,1:(i-1)]), d_prob_out[i,j])
-t_S[,] <- if (step %% time_step == 0) min(S[i], round(d[i,j]*S[i]/N[i])) else 0
+t_S[,] <- min(S[i], round(d[i,j]*S[i]/N[i]))
 
 # Transferred infected individuals
-t_I[,] <- if (step %% time_step == 0) d[i,j]-t_S[i,j] else 0
+t_I[,] <- d[i,j]-t_S[i,j]
 
 # Total outflows and inflows
-#t_tot[,] <- if (step %% time_step == 0) sum(t_S[i,j]) + sum(t_I[i,j]) else t_tot[i,j]
+t_tot[,] <-sum(t_S[i,j]) + sum(t_I[i,j])
 
 # Update compartments
-S_temp[] <- if (step %% time_step == 0) S[i] - sum(t_S[i,]) + sum(t_S[,i]) else S[i]
-I_temp[] <- if (step %% time_step == 0) I[i] - sum(t_I[i,]) + sum(t_I[,i]) else I[i]
+S_temp[] <- S[i] - sum(t_S[i,]) + sum(t_S[,i])
+I_temp[] <- I[i] - sum(t_I[i,]) + sum(t_I[,i])
 
 # 2. STEP EPIDEMICS--------------------------
-new_I[] <- rbinom(S_temp[i], 1-exp(-beta*I_temp[i]/N[i]))
+new_I[] <- rpois(S_temp[i] * (1-exp(-beta*I_temp[i]/N[i])))
 update(S[]) <- S_temp[i] - new_I[i]
 update(I[]) <- I_temp[i] + new_I[i]
 
@@ -64,16 +63,11 @@ update(I[]) <- I_temp[i] + new_I[i]
 ##############################
 initial(S[]) <- s_initial[i]
 initial(I[]) <- i_initial[i]
-# initial(t_S[,]) <- 0
-# initial(t_I[,]) <- 0
-# initial(S_temp[]) <- s_initial[i]
-# initial(I_temp[]) <- i_initial[i]
 
 ##############################
 # ADDITIONNAL VARIABLES TO
 # STORE AT EACH TIME STEP
 ##############################
 output(new_I[]) <- TRUE
-output(N[]) <- TRUE
 output(t_I[,]) <- TRUE
-#output(t_tot[,]) <- TRUE
+output(t_tot[,]) <- TRUE

@@ -4,7 +4,7 @@
 \alias{run_simulation}
 \title{Run initialized odin model and return list object}
 \usage{
-run_simulation(initialized_model, t_max, time_step, replicate)
+run_simulation(initialized_model, t_max, time_step, replicate = 1)
 }
 \arguments{
 \item{initialized_model}{Initialized odin model}

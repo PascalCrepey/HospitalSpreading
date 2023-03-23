@@ -9,7 +9,8 @@ initialize_odin_binomial(
   n_subpop,
   size_subpop,
   transfer_matrix,
-  I_per_subpop
+  I_per_subpop,
+  time_step
 )
 }
 \arguments{

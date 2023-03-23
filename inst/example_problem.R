@@ -25,10 +25,11 @@ model <- initialize_odin_binomial(beta = 0.16,
                                   n_subpop = n_hospitals,
                                   size_subpop = s_initial + i_initial,
                                   transfer_matrix = df_transfer,
-                                  I_per_subpop = i_initial)
+                                  I_per_subpop = i_initial,
+                                  time_step = 1)
 date_lim = 100
 res <- model$run(0:date_lim, replicate = 1)
-head(res[,,1],5)
+#head(res[,,1],5)
 
 summary(apply(res[,grepl("^I", dimnames(res)[[2]]),1], 2, min))
 summary(apply(res[,grepl("^S", dimnames(res)[[2]]),1], 2, min))
@@ -39,11 +40,24 @@ matplot(res[,grepl("^I", dimnames(res)[[2]]),1], type = "l", ylab = "Infected in
 matplot(res[,grepl("^S", dimnames(res)[[2]]),1], type = "l", ylab = "Susceptible individuals")
 matplot(res[,grepl("^t_I", dimnames(res)[[2]]),1], type = "l", ylab = "Transferred infected individuals")
 
-# Compare number of transitions to input transfer matrix
-res_trans = res[,grepl("t_tot", dimnames(res)[[2]]),1]
-res_trans = asplit(res_trans, MARGIN = 1)
-res_trans = lapply(res_trans, function(x) matrix(x, ncol = n_hospitals, nrow = n_hospitals, byrow = F))
-sum(!sapply(res_trans, function(x) identical(x, df_transfer)))
+######################################
+# SI MODEL SMALL TIME STEPS
+######################################
+time_step = 0.5
+model <- initialize_odin_binomial(beta = 0.16*time_step,
+                                  n_subpop = n_hospitals,
+                                  size_subpop = s_initial + i_initial,
+                                  transfer_matrix = df_transfer,
+                                  I_per_subpop = i_initial,
+                                  time_step = time_step)
+date_lim = 100
+res <- model$run(0:(date_lim/time_step), replicate = 1)
+
+par(mfrow = c(2,2))
+matplot(res[,grepl("^I", dimnames(res)[[2]]),1], type = "l", ylab = "Infected individuals")
+matplot(res[,grepl("^S", dimnames(res)[[2]]),1], type = "l", ylab = "Susceptible individuals")
+matplot(res[,grepl("^t_I", dimnames(res)[[2]]),1], type = "l", ylab = "Transferred infected individuals")
+
 
 ######################################
 # SIS MODEL

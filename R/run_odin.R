@@ -15,7 +15,7 @@
 run_simulation = function(initialized_model, t_max, time_step, replicate = 1) {
 
   # Run simulations
-  simulations <- initialized_model$run(1:(t_max/time_step), replicate = replicate)
+  simulations <- initialized_model$run(1:(t_max*time_step), replicate = replicate)
 
   # Get array of prevalence
   #   - Dimension 1: Supopulations

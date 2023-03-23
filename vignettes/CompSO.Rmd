@@ -57,7 +57,7 @@ Each hospital is of size *pop_size*, The initial number infected in each hospita
 tspan = 1:tspan_max # this is the number of time steps in integers
 #in order to effectively reduce the time step for odin, we must
 beta_odin = beta*time_step  #define a slower beta which operates in a shorter timestep
-tspan_odin = 1:(tspan_max/time_step) #define a longer number of time steps
+tspan_odin = 0:(tspan_max/time_step) #define a longer number of time steps
 starting_pop = rep(pop_size, npop) #vector of starting population sizes
 index_pop = c(index_size, rep(0, npop - 1)) #vector of starting infected populations
 ```
@@ -75,18 +75,19 @@ siminf_model <- getSimInfModel(beta = beta, tspan = 1:tspan_max, npop = npop
                , n_initial_infected = index_pop, starting_pop = starting_pop
                , trans_mat = trans_mat)
 
-odin_model <- initialize_odin_binomial(beta = beta/time_step,
+odin_model <- initialize_odin_binomial(beta = beta*time_step,
                             n_subpop = npop,
                             size_subpop = starting_pop,
                             I_per_subpop = index_pop,
-                            transfer_matrix = trans_mat)
+                            transfer_matrix = trans_mat,
+                            time_step = time_step)
 ```
 ## Model execution
 We then run the model using these parameters and compare the outputs.
 
 ```{r run_model, echo=TRUE, message=FALSE}
 siminf_result <- run(siminf_model)
-odin_result <- odin_model$run(1:(tspan_max/time_step))
+odin_result <- odin_model$run(0:(tspan_max/time_step))
 
 ```
 
@@ -95,7 +96,7 @@ siminf_tib <- convert_siminfU(siminf_result@U, times = tspan, comparts = c("S", 
                                , nmetapop = npop)
 
 odin_tib <- odin_result %>% as_tibble %>%
-  select(step, starts_with("S"), starts_with("I")) %>%
+  select(step, starts_with("S["), starts_with("I[")) %>%
   rename_all(~gsub("\\[", "_", .x)) %>%
   rename_all(~gsub("\\]", "", .x)) %>%
   mutate(times = step*time_step) %>%
@@ -144,7 +145,9 @@ odin_model <- initialize_odin_binomial(beta = beta_odin,
                             n_subpop = npop,
                             size_subpop = starting_pop,
                             I_per_subpop = index_pop,
-                            transfer_matrix = trans_mat_null)
+                            transfer_matrix = trans_mat_null,
+                            time_step = time_step
+                            )
 ```
 
 ```{r run_multisims, echo = F}
@@ -237,13 +240,15 @@ odin_model_binomial100 <- initialize_odin_binomial(beta = beta*0.01,
                             n_subpop = npop,
                             size_subpop = starting_pop,
                             I_per_subpop = index_pop,
-                            transfer_matrix = trans_mat)
+                            transfer_matrix = trans_mat,
+                            time_step = 0.01)
 
 odin_model_binomial5 <- initialize_odin_binomial(beta = beta*0.2,
                                           n_subpop = npop,
                                           size_subpop = starting_pop,
                                           I_per_subpop = index_pop,
-                                          transfer_matrix = trans_mat)
+                                          transfer_matrix = trans_mat,
+                                          time_step = 0.2)
 
 odin_model_poisson <- initialize_odin_poisson(beta = beta,
                                           n_subpop = npop,
@@ -251,10 +256,9 @@ odin_model_poisson <- initialize_odin_poisson(beta = beta,
                                           I_per_subpop = index_pop,
                                           transfer_matrix = trans_mat)
 
-odin_poisson_runs <- odin_model_poisson$run(tspan, replicate = Nsims)
-odin_binomial100_runs <- odin_model_binomial100$run(1:(tspan_max/0.01), replicate = Nsims)
-odin_binomial5_runs <- odin_model_binomial5$run(1:(tspan_max/0.2), replicate = Nsims)
-
+odin_binomial100_runs <- odin_model_binomial100$run(0:(tspan_max/0.01), replicate = Nsims)
+odin_binomial5_runs <- odin_model_binomial5$run(0:(tspan_max/0.2), replicate = Nsims)
+odin_poisson_runs <- odin_model_poisson$run(0:tspan_max, replicate = Nsims)
 
 
 for(i in 1:Nsims){
@@ -364,9 +368,9 @@ rbind(siminf_multi %>%
 We also compare the runtime of each over 10 runs.
 
 ```{r runtime_poisson, echo = T, eval = T}
-print(benchmark_odin(odin_model_poisson, times = tspan_odin, nRun = 10))
-print(benchmark_odin(odin_model_binomial5, times = tspan_odin, nRun = 10))
-print(benchmark_odin(odin_model_binomial100, times = tspan_odin, nRun = 10))
+print(benchmark_odin(odin_model_poisson, times = 0:tspan_max, nRun = 10))
+print(benchmark_odin(odin_model_binomial5, times = 0:(tspan_max/0.2), nRun = 10))
+print(benchmark_odin(odin_model_binomial100, times = 0:(tspan_max/0.01), nRun = 10))
 ```
 
 ## Table with pros and cons
