@@ -4,7 +4,7 @@
 \alias{getTransitionMatrix}
 \title{Rearrange odin output matrix into a matrix of transfers of infected individuals}
 \usage{
-getTransitionMatrix(sim, n_subpop)
+getTransitionMatrix(sim, n_subpop, timesteps_to_keep)
 }
 \arguments{
 \item{sim}{Raw odin output matrix}

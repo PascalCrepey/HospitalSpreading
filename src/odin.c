@@ -193,6 +193,7 @@ typedef struct odin_stoch_model_sis_binom_internal {
   double *t_I;
   double *t_S;
   double *t_tot;
+  int time_step;
 } odin_stoch_model_sis_binom_internal;
 odin_stoch_model_si_binom_fixing_internal* odin_stoch_model_si_binom_fixing_get_internal(SEXP internal_p, int closed_error);
 static void odin_stoch_model_si_binom_fixing_finalise(SEXP internal_p);
@@ -1635,6 +1636,7 @@ SEXP odin_stoch_model_sis_binom_create(SEXP user) {
   internal->N = NULL;
   internal->n_subpop = NA_INTEGER;
   internal->s_initial = NULL;
+  internal->time_step = NA_INTEGER;
   SEXP ptr = PROTECT(R_MakeExternalPtr(internal, R_NilValue, R_NilValue));
   R_RegisterCFinalizer(ptr, odin_stoch_model_sis_binom_finalise);
   UNPROTECT(1);
@@ -1651,7 +1653,7 @@ void odin_stoch_model_sis_binom_initmod_desolve(void(* odeparms) (int *, double 
 }
 SEXP odin_stoch_model_sis_binom_contents(SEXP internal_p) {
   odin_stoch_model_sis_binom_internal *internal = odin_stoch_model_sis_binom_get_internal(internal_p, 1);
-  SEXP contents = PROTECT(allocVector(VECSXP, 42));
+  SEXP contents = PROTECT(allocVector(VECSXP, 43));
   SET_VECTOR_ELT(contents, 0, ScalarReal(internal->alpha));
   SET_VECTOR_ELT(contents, 1, ScalarReal(internal->beta));
   SET_VECTOR_ELT(contents, 2, ScalarReal(internal->com_p));
@@ -1726,7 +1728,8 @@ SEXP odin_stoch_model_sis_binom_contents(SEXP internal_p) {
   memcpy(REAL(t_tot), internal->t_tot, internal->dim_t_tot * sizeof(double));
   odin_set_dim(t_tot, 2, internal->dim_t_tot_1, internal->dim_t_tot_2);
   SET_VECTOR_ELT(contents, 41, t_tot);
-  SEXP nms = PROTECT(allocVector(STRSXP, 42));
+  SET_VECTOR_ELT(contents, 42, ScalarInteger(internal->time_step));
+  SEXP nms = PROTECT(allocVector(STRSXP, 43));
   SET_STRING_ELT(nms, 0, mkChar("alpha"));
   SET_STRING_ELT(nms, 1, mkChar("beta"));
   SET_STRING_ELT(nms, 2, mkChar("com_p"));
@@ -1769,6 +1772,7 @@ SEXP odin_stoch_model_sis_binom_contents(SEXP internal_p) {
   SET_STRING_ELT(nms, 39, mkChar("t_I"));
   SET_STRING_ELT(nms, 40, mkChar("t_S"));
   SET_STRING_ELT(nms, 41, mkChar("t_tot"));
+  SET_STRING_ELT(nms, 42, mkChar("time_step"));
   setAttrib(contents, R_NamesSymbol, nms);
   UNPROTECT(16);
   return contents;
@@ -1779,6 +1783,7 @@ SEXP odin_stoch_model_sis_binom_set_user(SEXP internal_p, SEXP user) {
   internal->beta = user_get_scalar_double(user, "beta", internal->beta, NA_REAL, NA_REAL);
   internal->com_p = user_get_scalar_double(user, "com_p", internal->com_p, NA_REAL, NA_REAL);
   internal->n_subpop = user_get_scalar_int(user, "n_subpop", internal->n_subpop, NA_REAL, NA_REAL);
+  internal->time_step = user_get_scalar_int(user, "time_step", internal->time_step, NA_REAL, NA_REAL);
   internal->dim_I = internal->n_subpop;
   internal->dim_i_initial = internal->n_subpop;
   internal->dim_I_temp = internal->n_subpop;
@@ -1898,19 +1903,19 @@ void odin_stoch_model_sis_binom_rhs(odin_stoch_model_sis_binom_internal* interna
   }
   for (int i = 1; i <= internal->dim_t_S_1; ++i) {
     for (int j = 1; j <= internal->dim_t_S_2; ++j) {
-      internal->t_S[i - 1 + internal->dim_t_S_1 * (j - 1)] = fmin(S[i - 1], fround(internal->d[internal->dim_d_1 * (j - 1) + i - 1] * internal->S_prev[i - 1], 0));
+      internal->t_S[i - 1 + internal->dim_t_S_1 * (j - 1)] = (fmodr(step, internal->time_step) == 0 ? fmin(S[i - 1], fround(internal->d[internal->dim_d_1 * (j - 1) + i - 1] * internal->S_prev[i - 1], 0)) : 0);
     }
   }
   for (int i = 1; i <= internal->dim_S_temp; ++i) {
-    internal->S_temp[i - 1] = S[i - 1] - odin_sum2(internal->t_S, i - 1, i, 0, internal->dim_t_S_2, internal->dim_t_S_1) + odin_sum2(internal->t_S, 0, internal->dim_t_S_1, i - 1, i, internal->dim_t_S_1);
+    internal->S_temp[i - 1] = (fmodr(step, internal->time_step) == 0 ? S[i - 1] - odin_sum2(internal->t_S, i - 1, i, 0, internal->dim_t_S_2, internal->dim_t_S_1) + odin_sum2(internal->t_S, 0, internal->dim_t_S_1, i - 1, i, internal->dim_t_S_1) : S[i - 1]);
   }
   for (int i = 1; i <= internal->dim_t_I_1; ++i) {
     for (int j = 1; j <= internal->dim_t_I_2; ++j) {
-      internal->t_I[i - 1 + internal->dim_t_I_1 * (j - 1)] = internal->d[internal->dim_d_1 * (j - 1) + i - 1] - internal->t_S[internal->dim_t_S_1 * (j - 1) + i - 1];
+      internal->t_I[i - 1 + internal->dim_t_I_1 * (j - 1)] = (fmodr(step, internal->time_step) == 0 ? internal->d[internal->dim_d_1 * (j - 1) + i - 1] - internal->t_S[internal->dim_t_S_1 * (j - 1) + i - 1] : 0);
     }
   }
   for (int i = 1; i <= internal->dim_I_temp; ++i) {
-    internal->I_temp[i - 1] = I[i - 1] - odin_sum2(internal->t_I, i - 1, i, 0, internal->dim_t_I_2, internal->dim_t_I_1) + odin_sum2(internal->t_I, 0, internal->dim_t_I_1, i - 1, i, internal->dim_t_I_1);
+    internal->I_temp[i - 1] = (fmodr(step, internal->time_step) == 0 ? I[i - 1] - odin_sum2(internal->t_I, i - 1, i, 0, internal->dim_t_I_2, internal->dim_t_I_1) + odin_sum2(internal->t_I, 0, internal->dim_t_I_1, i - 1, i, internal->dim_t_I_1) : I[i - 1]);
   }
   for (int i = 1; i <= internal->dim_new_I; ++i) {
     internal->new_I[i - 1] = Rf_rbinom(round(internal->S_temp[i - 1]), 1 - exp(-(internal->beta) * internal->I_temp[i - 1] / (double) internal->N[i - 1]));

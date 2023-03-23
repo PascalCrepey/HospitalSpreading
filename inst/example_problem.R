@@ -80,7 +80,7 @@ model <- initialize_sis(beta = 0.16,
                         )
 
 date_lim = 100
-res <- model$run(1:date_lim, replicate = 1)
+res <- model$run(0:date_lim, replicate = 1)
 
 summary(apply(res[,grepl("^I", dimnames(res)[[2]]),1], 2, min))
 summary(apply(res[,grepl("^S", dimnames(res)[[2]]),1], 2, min))

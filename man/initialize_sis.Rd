@@ -11,7 +11,8 @@ initialize_sis(
   transfer_matrix,
   I_initial_time,
   community_prev,
-  initial_state_rando_proc = "none"
+  initial_state_rando_proc = "none",
+  n_steps_per_time_unit = 1
 )
 }
 \arguments{

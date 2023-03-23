@@ -12,16 +12,20 @@
 #' 4. the transfer matrix
 #' 5. the vector of subpopulation sizes
 #' @export
-run_simulation = function(initialized_model, t_max, time_step, replicate = 1) {
+run_simulation = function(initialized_model, t_max, n_steps_per_time_unit = 1, replicate = 1) {
 
   # Run simulations
-  simulations <- initialized_model$run(1:(t_max*time_step), replicate = replicate)
+  simulations <- initialized_model$run(0:(t_max*n_steps_per_time_unit), replicate = replicate)
+
+  # Time vector
+  time_vec = 0:(t_max*n_steps_per_time_unit)
+  timesteps_to_keep = !as.logical(time_vec %% n_steps_per_time_unit)
 
   # Get array of prevalence
   #   - Dimension 1: Supopulations
   #   - Dimension 2: Timesteps
   #   - Dimension 3: Simulation number
-  prevalence = simulations[,grepl("^I\\[[0-9]+\\]$", colnames(simulations)),]
+  prevalence = simulations[timesteps_to_keep,grepl("^I\\[[0-9]+\\]$", colnames(simulations)),]
   dimnames(prevalence)[[2]] = gsub("I\\[", "prev_", dimnames(prevalence)[[2]])
   dimnames(prevalence)[[2]] = gsub("]", "", dimnames(prevalence)[[2]])
 
@@ -29,13 +33,13 @@ run_simulation = function(initialized_model, t_max, time_step, replicate = 1) {
   #   - Dimension 1: Supopulations
   #   - Dimension 2: Timesteps
   #   - Dimension 3: Simulation number
-  incidence = simulations[,grepl("new_I\\[[0-9]+\\]$", colnames(simulations)),]
+  incidence = simulations[timesteps_to_keep,grepl("new_I\\[[0-9]+\\]$", colnames(simulations)),]
   dimnames(incidence)[[2]] = gsub("new_I\\[", "inc_", dimnames(incidence)[[2]])
   dimnames(incidence)[[2]] = gsub("]", "", dimnames(incidence)[[2]])
 
   # Get list of arrays of transfers
   transfers_I = lapply(asplit(simulations,3), function(x)
-    getTransitionMatrix(x, initialized_model$contents()$dim_N)
+    getTransitionMatrix(x, initialized_model$contents()$dim_N, timesteps_to_keep)
     )
 
   # Return output

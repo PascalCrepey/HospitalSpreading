@@ -4,16 +4,21 @@
 \alias{run_simulation}
 \title{Run initialized odin model and return list object}
 \usage{
-run_simulation(initialized_model, t_max, time_step, replicate = 1)
+run_simulation(
+  initialized_model,
+  t_max,
+  n_steps_per_time_unit = 1,
+  replicate = 1
+)
 }
 \arguments{
 \item{initialized_model}{Initialized odin model}
 
 \item{t_max}{Last time step}
 
-\item{time_step}{Duration of the time step}
-
 \item{replicate}{Number of simulations}
+
+\item{time_step}{Duration of the time step}
 }
 \value{
 List containing

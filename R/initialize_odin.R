@@ -91,7 +91,8 @@ initialize_sis <- function(beta,
                            transfer_matrix,
                            I_initial_time,
                            community_prev,
-                           initial_state_rando_proc = "none"
+                           initial_state_rando_proc = "none",
+                           n_steps_per_time_unit = 1
 )
 {
 
@@ -112,14 +113,15 @@ initialize_sis <- function(beta,
 
   # Create odin model
   model = odin_stoch_model_sis_binom$new(
-    beta = beta,
-    alpha = alpha,
+    beta = beta/n_steps_per_time_unit,
+    alpha = alpha/n_steps_per_time_unit,
     s_initial = initial_state$size_subpop - initial_state$I_per_subpop,
     i_initial = initial_state$I_per_subpop,
     n_subpop = length(size_subpop),
     N = size_subpop,
     d = transfer_matrix_full,
-    com_p = community_prev
+    com_p = community_prev,
+    time_step = n_steps_per_time_unit
     )
   return(model)
 
