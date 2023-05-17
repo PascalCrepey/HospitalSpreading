@@ -56,7 +56,6 @@ Each hospital is of size *pop_size*, The initial number infected in each hospita
 ```{r hidden_parameters, include = F}
 tspan = 1:tspan_max # this is the number of time steps in integers
 #in order to effectively reduce the time step for odin, we must
-beta_odin = beta*time_step  #define a slower beta which operates in a shorter timestep
 tspan_odin = 0:(tspan_max/time_step) #define a longer number of time steps
 starting_pop = rep(pop_size, npop) #vector of starting population sizes
 index_pop = c(index_size, rep(0, npop - 1)) #vector of starting infected populations
@@ -141,7 +140,7 @@ siminf_model <- getSimInfModel(beta = beta, tspan = tspan, npop = npop
                , n_initial_infected = index_pop, starting_pop = starting_pop
                , trans_mat = trans_mat_null)
 
-odin_model <- initialize_odin_binomial(beta = beta_odin,
+odin_model <- initialize_odin_binomial(beta = beta,
                             n_subpop = npop,
                             size_subpop = starting_pop,
                             I_per_subpop = index_pop,
@@ -329,13 +328,13 @@ rbind(siminf_multi %>%
             , lo = max(value)
             , hi = min(value)) %>%
     mutate(package = "SimInf")
-, odin_binomial100_multi %>%
-  mutate(times = times*0.01) %>%
+, odin_multi %>%
+  mutate(times = times*time_step) %>%
   group_by(times, metapop, state) %>%
   summarise(mean = mean(value)
             , lo = max(value)
             , hi = min(value)) %>%
-  mutate(package = "Odin binomial step 100th")
+  mutate(package = "Odin binomial step 1")
 , odin_binomial5_multi %>%
   mutate(times = times*0.2) %>%
   group_by(times, metapop, state) %>%
@@ -343,6 +342,13 @@ rbind(siminf_multi %>%
             , lo = max(value)
             , hi = min(value)) %>%
   mutate(package = "Odin binomial step 5th")
+, odin_binomial100_multi %>%
+  mutate(times = times*0.01) %>%
+  group_by(times, metapop, state) %>%
+  summarise(mean = mean(value)
+            , lo = max(value)
+            , hi = min(value)) %>%
+  mutate(package = "Odin binomial step 100th")
 , odin_poisson_multi %>%
   group_by(times, metapop, state) %>%
   summarise(mean = mean(value)
