@@ -23,12 +23,12 @@ initialize_odin_binomial <- function(
 {
 
   model = odin_stoch_model_si_binom_fixing$new(
-    beta = beta,
+    beta = beta/time_step,
     s_initial = size_subpop - I_per_subpop,
     i_initial = I_per_subpop,
     n_hospitals = n_subpop,
     d = transfer_matrix,
-    time_step = 1/time_step
+    time_step = time_step
     )
   return(model)
 

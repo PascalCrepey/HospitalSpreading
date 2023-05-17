@@ -236,19 +236,19 @@ The *odin* package integrates in discrete time, so discrepancies between this an
 Changes of state in this package are governed by a binomial distribution by default, but as these numbers rise they approach a poisson distribution, and it may be more appropriate to use that explicitly, for which the package provides a functionality, and we explore this as well. 
 
 ```{r run_poisson, echo = F, eval = T, message=FALSE}
-odin_model_binomial100 <- initialize_odin_binomial(beta = beta*0.01,
+odin_model_binomial100 <- initialize_odin_binomial(beta = beta,
                             n_subpop = npop,
                             size_subpop = starting_pop,
                             I_per_subpop = index_pop,
                             transfer_matrix = trans_mat,
-                            time_step = 0.01)
+                            time_step = 100)
 
-odin_model_binomial5 <- initialize_odin_binomial(beta = beta*0.2,
+odin_model_binomial5 <- initialize_odin_binomial(beta = beta,
                                           n_subpop = npop,
                                           size_subpop = starting_pop,
                                           I_per_subpop = index_pop,
                                           transfer_matrix = trans_mat,
-                                          time_step = 0.2)
+                                          time_step = 5)
 
 odin_model_poisson <- initialize_odin_poisson(beta = beta,
                                           n_subpop = npop,
@@ -256,8 +256,8 @@ odin_model_poisson <- initialize_odin_poisson(beta = beta,
                                           I_per_subpop = index_pop,
                                           transfer_matrix = trans_mat)
 
-odin_binomial100_runs <- odin_model_binomial100$run(0:(tspan_max/0.01), replicate = Nsims)
-odin_binomial5_runs <- odin_model_binomial5$run(0:(tspan_max/0.2), replicate = Nsims)
+odin_binomial100_runs <- odin_model_binomial100$run(0:(tspan_max*100), replicate = Nsims)
+odin_binomial5_runs <- odin_model_binomial5$run(0:(tspan_max*5), replicate = Nsims)
 odin_poisson_runs <- odin_model_poisson$run(0:tspan_max, replicate = Nsims)
 
 

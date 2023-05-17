@@ -192,8 +192,8 @@ trans_mat_null = matrix(0, nrow = npop, ncol = npop)
 
 # Initialise model
 odin_model <- initialize_sis(
-  beta = beta/time_step,
-  alpha = alpha/time_step,
+  beta = beta,
+  alpha = alpha,
   size_subpop = size_subpop,
   transfer_matrix = trans_mat,
   I_initial_time = I_initial_time,
